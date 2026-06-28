@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Modal,
+  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useGame, Player } from '../context/GameContext';
@@ -9,8 +9,8 @@ type ScoringStep =
   | { kind: 'player_select' }
   | { kind: 'action'; player: Player }
   | { kind: 'foul_shots'; player: Player; shotCount: number; shotIndex: number; made: number }
-  | { kind: 'bench_in'; outPlayer: Player }
-  | { kind: 'bench_select' };
+  | { kind: 'bench_in'; inPlayer: Player }
+  | { kind: 'technical_select' };
 
 export default function ScoringPanel() {
   const router = useRouter();
@@ -29,35 +29,51 @@ export default function ScoringPanel() {
   const bench = benchPlayers(team);
 
   const handlePlayerTap = (player: Player) => {
-    if (benchMode) {
-      // bench mode: select outgoing player
-      setStep({ kind: 'bench_in', outPlayer: player });
-      setBenchMode(false);
+    if (step.kind === 'bench_in') {
+      dispatch({ type: 'SUBSTITUTE', team, outPlayerId: player.id, inPlayerId: step.inPlayer.id });
+      setStep({ kind: 'player_select' });
+    } else if (step.kind === 'technical_select') {
+      const shots = state.rules.technicalFoulShots;
+      const countsAsPersonal = state.rules.playerTechIsPersonalFoul;
+      dispatch({ type: 'ADD_TECHNICAL', team });
+      if (countsAsPersonal) {
+        dispatch({ type: 'ADD_FOUL', team, playerId: player.id });
+      }
+      Alert.alert(
+        `Technical Foul — #${player.number} ${player.name}`,
+        `${countsAsPersonal ? 'Personal foul + team foul' : 'Team foul only'} on ${teamData.name}.\nOpponent shoots ${shots} free throw${shots !== 1 ? 's' : ''}.`,
+        [{ text: 'OK' }]
+      );
+      setStep({ kind: 'player_select' });
     } else {
       setStep({ kind: 'action', player });
     }
   };
 
   const handleBenchPlayerTap = (inPlayer: Player) => {
-    if (step.kind === 'bench_in') {
-      dispatch({ type: 'SUBSTITUTE', team, outPlayerId: step.outPlayer.id, inPlayerId: inPlayer.id });
-      setStep({ kind: 'player_select' });
-    }
+    // Bench player tapped = incoming player; now wait for active player tap
+    setStep({ kind: 'bench_in', inPlayer });
+    setBenchMode(false);
   };
 
   const handleAction = (action: string, player: Player) => {
     if (action === '2pts') {
       dispatch({ type: 'ADD_POINTS', team, playerId: player.id, points: 2 });
       setStep({ kind: 'player_select' });
+    } else if (action === 'miss_2') {
+      dispatch({ type: 'ADD_POINTS', team, playerId: player.id, points: 2, missed: true });
+      setStep({ kind: 'player_select' });
     } else if (action === '3pts') {
       dispatch({ type: 'ADD_POINTS', team, playerId: player.id, points: 3 });
+      setStep({ kind: 'player_select' });
+    } else if (action === 'miss_3') {
+      dispatch({ type: 'ADD_POINTS', team, playerId: player.id, points: 3, missed: true });
       setStep({ kind: 'player_select' });
     } else if (action === 'foul') {
       dispatch({ type: 'ADD_FOUL', team, playerId: player.id });
       setStep({ kind: 'player_select' });
     } else if (action === 'timeout') {
-      dispatch({ type: 'USE_TIMEOUT', team });
-      setStep({ kind: 'player_select' });
+      handleTeamAction('timeout');
     } else if (action === 'foul_1') {
       setStep({ kind: 'foul_shots', player, shotCount: 1, shotIndex: 0, made: 0 });
     } else if (action === 'foul_2') {
@@ -81,35 +97,77 @@ export default function ScoringPanel() {
 
   const handleTeamAction = (action: string) => {
     if (action === 'timeout') {
+      const timeoutsKey = team === 'A' ? 'teamATimeoutsLeft' : 'teamBTimeoutsLeft';
+      const remaining = state[timeoutsKey];
+      if (remaining <= 0) {
+        Alert.alert('No Timeouts Left', `${teamData.name} has no timeouts remaining.`);
+        return;
+      }
       dispatch({ type: 'USE_TIMEOUT', team });
+      Alert.alert(
+        'Timeout Called',
+        `${teamData.name} timeout.\n${remaining - 1} timeout${remaining - 1 !== 1 ? 's' : ''} remaining.`,
+        [{ text: 'OK' }]
+      );
       setStep({ kind: 'player_select' });
     } else if (action === 'technical') {
-      // coach technical — opponent gets 2 FTs, use a placeholder player
-      setStep({ kind: 'player_select' });
+      const shots = state.rules.technicalFoulShots;
+      Alert.alert(
+        'Technical Foul',
+        `Who is the technical called on?`,
+        [
+          {
+            text: 'Coach / Bench',
+            onPress: () => {
+              dispatch({ type: 'ADD_TECHNICAL', team });
+              Alert.alert('Technical Foul — Coach', `Team foul on ${teamData.name}.\nOpponent shoots ${shots} free throw${shots !== 1 ? 's' : ''}.`, [{ text: 'OK' }]);
+              setStep({ kind: 'player_select' });
+            },
+          },
+          {
+            text: 'Player',
+            onPress: () => setStep({ kind: 'technical_select' }),
+          },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
     }
   };
 
   const teamColor = teamData.color;
   const isLeft = team === 'A';
 
+  const personalFoulLimit = state.rules.personalFoulLimit;
+
   const renderPlayerGrid = (players: Player[], onTap: (p: Player) => void, highlight?: string) => (
     <View style={styles.playerGrid}>
-      {players.map(p => (
-        <TouchableOpacity
-          key={p.id}
-          style={[
-            styles.playerButton,
-            { borderColor: teamColor },
-            highlight === p.id && styles.playerButtonHighlight,
-          ]}
-          onPress={() => onTap(p)}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.playerNumber, { color: teamColor }]}>{p.number || '?'}</Text>
-          <Text style={styles.playerName} numberOfLines={1}>{p.name || 'Player'}</Text>
-          <Text style={styles.playerFouls}>F:{p.stats.fouls}</Text>
-        </TouchableOpacity>
-      ))}
+      {players.map(p => {
+        const foulTrouble = p.stats.fouls >= personalFoulLimit - 1;
+        const fouledOut = p.stats.fouls >= personalFoulLimit;
+        return (
+          <TouchableOpacity
+            key={p.id}
+            style={[
+              styles.playerButton,
+              { borderColor: fouledOut ? '#CC2222' : foulTrouble ? '#CC7700' : teamColor },
+              highlight === p.id && styles.playerButtonHighlight,
+              fouledOut && styles.playerButtonFouledOut,
+            ]}
+            onPress={() => onTap(p)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.playerNumber, { color: fouledOut ? '#CC2222' : teamColor }]}>{p.number || '?'}</Text>
+            <Text style={styles.playerName} numberOfLines={1}>{p.name || 'Player'}</Text>
+            <Text style={[
+              styles.playerFouls,
+              foulTrouble && !fouledOut && styles.playerFoulsTrouble,
+              fouledOut && styles.playerFoulsFouledOut,
+            ]}>
+              {fouledOut ? 'OUT' : `F:${p.stats.fouls}`}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 
@@ -124,8 +182,17 @@ export default function ScoringPanel() {
             <TouchableOpacity style={[styles.actionBtn, styles.actionBtnGreen]} onPress={() => handleAction('2pts', p)}>
               <Text style={styles.actionBtnText}>2 PTS</Text>
             </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionBtn, styles.actionBtnMiss]} onPress={() => handleAction('miss_2', p)}>
+              <Text style={styles.actionBtnText}>MISS 2</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.actionRow}>
             <TouchableOpacity style={[styles.actionBtn, styles.actionBtnBlue]} onPress={() => handleAction('3pts', p)}>
               <Text style={styles.actionBtnText}>3 PTS</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionBtn, styles.actionBtnMiss]} onPress={() => handleAction('miss_3', p)}>
+              <Text style={styles.actionBtnText}>MISS 3</Text>
             </TouchableOpacity>
           </View>
 
@@ -183,22 +250,22 @@ export default function ScoringPanel() {
       return (
         <View style={styles.actionPanel}>
           <Text style={[styles.actionTitle, { color: teamColor }]}>
-            SUB OUT: #{step.outPlayer.number}
+            SUB IN: #{step.inPlayer.number}
           </Text>
-          <Text style={styles.subInstructions}>Tap incoming player from bench</Text>
-          <ScrollView style={styles.benchList}>
-            {bench.map(p => (
-              <TouchableOpacity
-                key={p.id}
-                style={[styles.benchPlayerRow, { borderColor: teamColor }]}
-                onPress={() => handleBenchPlayerTap(p)}
-              >
-                <Text style={[styles.benchPlayerNum, { color: teamColor }]}>#{p.number}</Text>
-                <Text style={styles.benchPlayerName}>{p.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <Text style={styles.subInstructions}>Tap the player{'\n'}coming OUT of the game</Text>
           <TouchableOpacity style={styles.cancelBtn} onPress={() => { setBenchMode(false); setStep({ kind: 'player_select' }); }}>
+            <Text style={styles.cancelBtnText}>CANCEL</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (step.kind === 'technical_select') {
+      return (
+        <View style={styles.actionPanel}>
+          <Text style={[styles.actionTitle, { color: '#CC7700' }]}>TECHNICAL</Text>
+          <Text style={styles.subInstructions}>Tap the player{'\n'}who received the technical</Text>
+          <TouchableOpacity style={styles.cancelBtn} onPress={() => setStep({ kind: 'player_select' })}>
             <Text style={styles.cancelBtnText}>CANCEL</Text>
           </TouchableOpacity>
         </View>
@@ -243,14 +310,7 @@ export default function ScoringPanel() {
               <TouchableOpacity
                 key={p.id}
                 style={[styles.benchPlayerRow, { borderColor: teamColor }]}
-                onPress={() => {
-                  // In bench mode from team side, we need to pick outgoing next
-                  // Actually let's simplify: tap bench player, then tap active player as outgoing
-                  setBenchMode(false);
-                  setStep({ kind: 'bench_in', outPlayer: p });
-                  // Hmm, we need the opposite — let's keep it simple:
-                  // tap BENCH toggle → active players become "select outgoing"
-                }}
+                onPress={() => handleBenchPlayerTap(p)}
               >
                 <Text style={[styles.benchPlayerNum, { color: teamColor }]}>#{p.number}</Text>
                 <Text style={styles.benchPlayerName}>{p.name}</Text>
@@ -260,39 +320,13 @@ export default function ScoringPanel() {
         </View>
       ) : (
         <View style={{ flex: 1 }}>
-          {step.kind === 'bench_in' ? (
-            <View style={{ flex: 1 }}>
-              <Text style={styles.benchLabel}>TAP INCOMING FROM BENCH</Text>
-              {bench.map(p => (
-                <TouchableOpacity
-                  key={p.id}
-                  style={[styles.benchPlayerRow, { borderColor: teamColor }]}
-                  onPress={() => handleBenchPlayerTap(p)}
-                >
-                  <Text style={[styles.benchPlayerNum, { color: teamColor }]}>#{p.number}</Text>
-                  <Text style={styles.benchPlayerName}>{p.name}</Text>
-                </TouchableOpacity>
-              ))}
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setStep({ kind: 'player_select' })}>
-                <Text style={styles.cancelBtnText}>CANCEL</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <>
-              <Text style={styles.courtLabel}>ON COURT</Text>
-              {renderPlayerGrid(
-                active,
-                (p) => {
-                  if (step.kind === 'bench_in') {
-                    // This is the outgoing player
-                    handleBenchPlayerTap(p);
-                  } else {
-                    handlePlayerTap(p);
-                  }
-                },
-                step.kind === 'action' ? step.player.id : undefined
-              )}
-            </>
+          <Text style={styles.courtLabel}>
+            {step.kind === 'bench_in' ? 'TAP PLAYER GOING OUT' : step.kind === 'technical_select' ? 'TAP PLAYER — TECHNICAL' : 'ON COURT'}
+          </Text>
+          {renderPlayerGrid(
+            active,
+            handlePlayerTap,
+            step.kind === 'action' ? step.player.id : undefined
           )}
         </View>
       )}
@@ -444,6 +478,21 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 9,
     marginTop: 1,
+    fontWeight: '600',
+  },
+  playerFoulsTrouble: {
+    color: '#CC7700',
+    fontWeight: '900',
+    fontSize: 10,
+  },
+  playerFoulsFouledOut: {
+    color: '#CC2222',
+    fontWeight: '900',
+    fontSize: 10,
+  },
+  playerButtonFouledOut: {
+    opacity: 0.5,
+    backgroundColor: '#1A0505',
   },
 
   // Action Side
@@ -489,6 +538,7 @@ const styles = StyleSheet.create({
   actionBtnRed: { backgroundColor: '#7A1A1A' },
   actionBtnYellow: { backgroundColor: '#C8A040' },
   actionBtnOrange: { backgroundColor: '#7A3A00' },
+  actionBtnMiss: { backgroundColor: '#2A2A2A', borderWidth: 1, borderColor: '#444' },
   actionBtnText: {
     color: '#FFF',
     fontSize: 15,

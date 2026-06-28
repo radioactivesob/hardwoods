@@ -8,7 +8,7 @@ import { useGame, TeamConfig, Player } from '../context/GameContext';
 const COLORS = [
   '#1E90FF', '#FF4500', '#32CD32', '#FF1493',
   '#FFD700', '#9400D3', '#FF6600', '#00CED1',
-  '#FF0000', '#00FF7F', '#FF69B4', '#1E90FF',
+  '#FF0000', '#00FF7F', '#FF69B4', '#FFFFFF',
 ];
 
 let playerIdCounter = 1000;

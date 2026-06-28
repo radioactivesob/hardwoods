@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions,
+  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useGame } from '../context/GameContext';
@@ -9,11 +9,49 @@ const { width, height } = Dimensions.get('window');
 
 export default function Scoreboard() {
   const router = useRouter();
-  const { state, dispatch, totalScore } = useGame();
+  const { state, dispatch, undo, canUndo, totalScore } = useGame();
   const { teamA, teamB, currentPeriod, teamAFouls, teamBFouls, teamATimeoutsLeft, teamBTimeoutsLeft, rules } = state;
 
   const scoreA = totalScore('A');
   const scoreB = totalScore('B');
+
+  const periodLabel = currentPeriod > rules.numPeriods ? 'OT' : `Q${currentPeriod}`;
+  const nextPeriodLabel = currentPeriod >= rules.numPeriods ? 'OT' : `Q${currentPeriod + 1}`;
+
+  const confirmNextPeriod = () => {
+    Alert.alert(
+      `Advance to ${nextPeriodLabel}?`,
+      `End ${periodLabel} and start ${nextPeriodLabel}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: `Start ${nextPeriodLabel}`, style: 'destructive', onPress: () => dispatch({ type: 'NEXT_PERIOD' }) },
+      ]
+    );
+  };
+
+  const confirmPrevPeriod = () => {
+    if (currentPeriod <= 1) return;
+    const prevLabel = currentPeriod - 1 > rules.numPeriods ? 'OT' : `Q${currentPeriod - 1}`;
+    Alert.alert(
+      `Go back to ${prevLabel}?`,
+      'This will undo the period advance. Scores already entered will remain.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: `Back to ${prevLabel}`, onPress: () => dispatch({ type: 'PREV_PERIOD' }) },
+      ]
+    );
+  };
+
+  const confirmNewGame = () => {
+    Alert.alert(
+      'Start New Game?',
+      'This will reset all scores and stats. Export the scorebook first if you want to save it.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'New Game', style: 'destructive', onPress: () => dispatch({ type: 'RESET_GAME' }) },
+      ]
+    );
+  };
 
   const renderTimeoutDots = (left: number, total: number) => {
     const dots = [];
@@ -45,9 +83,7 @@ export default function Scoreboard() {
             <Text style={styles.headerScoreDash}> – </Text>
             <Text style={{ color: teamB.color }}>{scoreB}</Text>
           </Text>
-          <Text style={styles.headerPeriod}>
-            {currentPeriod > rules.numPeriods ? 'OT' : `Q${currentPeriod}`}
-          </Text>
+          <Text style={styles.headerPeriod}>{periodLabel}</Text>
         </View>
 
         <View style={[styles.headerTeam, styles.headerTeamRight]}>
@@ -99,18 +135,26 @@ export default function Scoreboard() {
         <TouchableOpacity style={styles.adminButton} onPress={() => router.push('/scorebook')}>
           <Text style={styles.adminButtonText}>📋 SCOREBOOK</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.adminButton, styles.adminButtonDisabled]}>
-          <Text style={[styles.adminButtonText, styles.adminButtonTextDisabled]}>📡 CONNECT</Text>
+        <TouchableOpacity
+          style={[styles.adminButton, !canUndo && styles.adminButtonDisabled]}
+          onPress={canUndo ? undo : undefined}
+        >
+          <Text style={[styles.adminButtonText, { color: canUndo ? '#C8A040' : '#444' }]}>⟵ UNDO</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.adminButton, styles.adminButtonDanger]} onPress={confirmNewGame}>
+          <Text style={[styles.adminButtonText, { color: '#FF6B6B' }]}>↺ NEW GAME</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.nextPeriodButton}
-          onPress={() => dispatch({ type: 'NEXT_PERIOD' })}
-        >
-          <Text style={styles.nextPeriodText}>
-            {currentPeriod >= rules.numPeriods ? 'OT →' : `Q${currentPeriod + 1} →`}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.periodButtons}>
+          {currentPeriod > 1 && (
+            <TouchableOpacity style={styles.prevPeriodButton} onPress={confirmPrevPeriod}>
+              <Text style={styles.prevPeriodText}>← {currentPeriod - 1 > rules.numPeriods ? 'OT' : `Q${currentPeriod - 1}`}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.nextPeriodButton} onPress={confirmNextPeriod}>
+            <Text style={styles.nextPeriodText}>{nextPeriodLabel} →</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -178,11 +222,14 @@ const styles = StyleSheet.create({
     color: '#555',
   },
   headerPeriod: {
-    color: '#8B6914',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 2,
-    marginTop: 1,
+    color: '#C8A040',
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 3,
+    marginTop: 2,
+    textShadowColor: '#C8A04066',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
   },
   timeoutDots: {
     flexDirection: 'row',
@@ -279,6 +326,9 @@ const styles = StyleSheet.create({
   adminButtonDisabled: {
     opacity: 0.4,
   },
+  adminButtonDanger: {
+    borderColor: '#5A1A1A',
+  },
   adminButtonText: {
     color: '#C8A040',
     fontSize: 10,
@@ -287,6 +337,25 @@ const styles = StyleSheet.create({
   },
   adminButtonTextDisabled: {
     color: '#666',
+  },
+  periodButtons: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  prevPeriodButton: {
+    backgroundColor: '#2A1A00',
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3D2800',
+  },
+  prevPeriodText: {
+    color: '#8B6914',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
   nextPeriodButton: {
     backgroundColor: '#8B6914',
