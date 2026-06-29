@@ -4,10 +4,12 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useGame } from '../context/GameContext';
+import { useLandscapeOnly } from '../hooks/useScreenOrientation';
 
 const { width, height } = Dimensions.get('window');
 
 export default function Scoreboard() {
+  useLandscapeOnly();
   const router = useRouter();
   const { state, dispatch, undo, canUndo, totalScore } = useGame();
   const { teamA, teamB, currentPeriod, teamAFouls, teamBFouls, teamATimeoutsLeft, teamBTimeoutsLeft, rules } = state;

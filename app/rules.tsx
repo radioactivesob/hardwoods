@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, TextInput, Alert,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useGame, RulesConfig, SavedPreset } from '../context/GameContext';
+import { useAllOrientations } from '../hooks/useScreenOrientation';
 
 export default function RulesSetup() {
+  useAllOrientations();
   const router = useRouter();
   const { state, dispatch } = useGame();
   const [rules, setRules] = useState<RulesConfig>({ ...state.rules });
@@ -81,6 +84,7 @@ export default function RulesSetup() {
   );
 
   return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
@@ -144,6 +148,7 @@ export default function RulesSetup() {
         <View style={{ height: 20 }} />
       </ScrollView>
     </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 

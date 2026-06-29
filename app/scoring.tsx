@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useGame, Player } from '../context/GameContext';
+import { useLandscapeOnly } from '../hooks/useScreenOrientation';
 
 type ScoringStep =
   | { kind: 'player_select' }
@@ -13,6 +14,7 @@ type ScoringStep =
   | { kind: 'technical_select' };
 
 export default function ScoringPanel() {
+  useLandscapeOnly();
   const router = useRouter();
   const { team } = useLocalSearchParams<{ team: 'A' | 'B' }>();
   const { state, dispatch, activePlayers, benchPlayers } = useGame();
@@ -332,11 +334,13 @@ export default function ScoringPanel() {
           <Text style={styles.courtLabel}>
             {step.kind === 'bench_in' ? 'TAP PLAYER GOING OUT' : step.kind === 'technical_select' ? 'TAP PLAYER — TECHNICAL' : 'ON COURT'}
           </Text>
-          {renderPlayerGrid(
-            active,
-            handlePlayerTap,
-            step.kind === 'action' ? step.player.id : undefined
-          )}
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+            {renderPlayerGrid(
+              active,
+              handlePlayerTap,
+              step.kind === 'action' ? step.player.id : undefined
+            )}
+          </ScrollView>
         </View>
       )}
     </View>
@@ -460,7 +464,7 @@ const styles = StyleSheet.create({
   },
   playerButton: {
     width: '30%',
-    aspectRatio: 0.9,
+    aspectRatio: 1.1,
     borderRadius: 8,
     borderWidth: 2,
     backgroundColor: '#0D0700',

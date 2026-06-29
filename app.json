@@ -3,7 +3,7 @@
     "name": "Hardwoods",
     "slug": "hardwoods",
     "version": "1.0.0",
-    "orientation": "landscape",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "scheme": "hardwoods",
@@ -11,7 +11,13 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.hardwoods.scoreboard",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UISupportedInterfaceOrientations": [
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight",
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown"
+        ]
       }
     },
     "android": {
@@ -29,8 +35,10 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "./plugins/withCppStandard"
     ],
+    "newArchEnabled": false,
     "extra": {
       "router": {},
       "eas": {
