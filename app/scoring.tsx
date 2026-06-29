@@ -306,16 +306,25 @@ export default function ScoringPanel() {
           {bench.length === 0 ? (
             <Text style={styles.noBench}>No bench players</Text>
           ) : (
-            bench.map(p => (
-              <TouchableOpacity
-                key={p.id}
-                style={[styles.benchPlayerRow, { borderColor: teamColor }]}
-                onPress={() => handleBenchPlayerTap(p)}
-              >
-                <Text style={[styles.benchPlayerNum, { color: teamColor }]}>#{p.number}</Text>
-                <Text style={styles.benchPlayerName}>{p.name}</Text>
-              </TouchableOpacity>
-            ))
+            bench.map(p => {
+              const isFouledOut = p.stats.fouls >= personalFoulLimit;
+              return (
+                <TouchableOpacity
+                  key={p.id}
+                  style={[
+                    styles.benchPlayerRow,
+                    { borderColor: isFouledOut ? '#CC2222' : teamColor },
+                    isFouledOut && styles.benchPlayerFouledOut,
+                  ]}
+                  onPress={() => !isFouledOut && handleBenchPlayerTap(p)}
+                  activeOpacity={isFouledOut ? 1 : 0.7}
+                >
+                  <Text style={[styles.benchPlayerNum, { color: isFouledOut ? '#CC2222' : teamColor }]}>#{p.number}</Text>
+                  <Text style={[styles.benchPlayerName, isFouledOut && { color: '#CC2222' }]}>{p.name}</Text>
+                  {isFouledOut && <Text style={styles.benchFouledOutBadge}>FOULED OUT</Text>}
+                </TouchableOpacity>
+              );
+            })
           )}
         </View>
       ) : (
@@ -455,7 +464,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 2,
     backgroundColor: '#0D0700',
-    justifyContent: 'center',
+    justifyContent: 'space-evenly',
     alignItems: 'center',
     padding: 4,
   },
@@ -472,12 +481,10 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '600',
     textAlign: 'center',
-    marginTop: 2,
   },
   playerFouls: {
     color: '#666',
     fontSize: 9,
-    marginTop: 1,
     fontWeight: '600',
   },
   playerFoulsTrouble: {
@@ -641,6 +648,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     flex: 1,
+  },
+  benchPlayerFouledOut: {
+    opacity: 0.6,
+    backgroundColor: '#1A0505',
+  },
+  benchFouledOutBadge: {
+    color: '#CC2222',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
   noBench: {
     color: '#444',

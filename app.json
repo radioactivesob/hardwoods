@@ -9,7 +9,10 @@
     "scheme": "hardwoods",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.hardwoods.scoreboard"
+      "bundleIdentifier": "com.hardwoods.scoreboard",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,6 +30,12 @@
     },
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e118b356-ed84-430e-9fa7-d0efb5f956a0"
+      }
+    }
   }
 }

@@ -175,7 +175,7 @@ function gameReducer(state: GameState, action: Action): GameState {
       const newScores = [...state.periodScores];
       const scoreKey = action.team === 'A' ? 'teamA' : 'teamB';
 
-      if (action.points > 0) {
+      if (action.points > 0 && !action.missed) {
         newScores[periodIdx] = {
           ...newScores[periodIdx],
           [scoreKey]: newScores[periodIdx][scoreKey] + action.points,
