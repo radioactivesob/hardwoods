@@ -36,9 +36,9 @@
     },
     "plugins": [
       "expo-router",
-      "./plugins/withCppStandard"
+      "expo-sharing",
+      "expo-status-bar"
     ],
-    "newArchEnabled": false,
     "extra": {
       "router": {},
       "eas": {
