@@ -35,7 +35,16 @@
     "plugins": [
       "expo-router",
       "expo-sharing",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#180C01",
+          "resizeMode": "contain",
+          "imageWidth": 220
+        }
+      ]
     ],
     "extra": {
       "router": {},
