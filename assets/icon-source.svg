@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="1024" height="1024">
+<defs>
+<pattern id="pebble" width="20" height="20" patternUnits="userSpaceOnUse">
+<circle cx="5" cy="5" r="2.2" fill="#E0691A" opacity="0.55"/>
+<circle cx="15" cy="15" r="2.2" fill="#E0691A" opacity="0.55"/>
+<circle cx="15" cy="4" r="1.6" fill="#E0691A" opacity="0.4"/>
+<circle cx="4" cy="15" r="1.6" fill="#E0691A" opacity="0.4"/>
+</pattern>
+</defs>
+<rect x="0" y="0" width="400" height="400" fill="#180C01"/>
+<circle cx="200" cy="200" r="170" fill="#FF8A1F"/>
+<circle cx="200" cy="200" r="170" fill="url(#pebble)"/>
+<path d="M200,30 L200,370" fill="none" stroke="#2A1206" stroke-width="7"/>
+<path d="M30,200 L370,200" fill="none" stroke="#2A1206" stroke-width="7"/>
+<path d="M200,30 C52,88 52,312 200,370" fill="none" stroke="#2A1206" stroke-width="7"/>
+<path d="M200,30 C348,88 348,312 200,370" fill="none" stroke="#2A1206" stroke-width="7"/>
+<circle cx="200" cy="200" r="167" fill="none" stroke="#FFC93C" stroke-width="6"/>
+<rect x="121" y="96" width="52" height="208" rx="10" fill="#2A1206"/>
+<rect x="227" y="96" width="52" height="208" rx="10" fill="#2A1206"/>
+<rect x="121" y="174" width="158" height="52" rx="10" fill="#2A1206"/>
+<rect x="125" y="100" width="44" height="200" rx="7" fill="#FFC93C"/>
+<rect x="231" y="100" width="44" height="200" rx="7" fill="#FFC93C"/>
+<rect x="125" y="178" width="150" height="44" rx="7" fill="#FFC93C"/>
+</svg>
