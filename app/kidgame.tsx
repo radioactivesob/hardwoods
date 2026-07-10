@@ -146,17 +146,22 @@ export default function KidGame() {
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.grid}>
-        {profile.enabledStats.map(key => (
-          <TouchableOpacity
-            key={key}
-            style={styles.tile}
-            onPress={() => tap(key)}
-            activeOpacity={0.6}
-          >
-            <Text style={styles.tileCount}>{totals[key]}</Text>
-            <Text style={styles.tileLabel}>{STAT_DEFS[key].label}</Text>
-          </TouchableOpacity>
-        ))}
+        {profile.enabledStats.map(key => {
+          const negative = STAT_DEFS[key].negative;
+          return (
+            <TouchableOpacity
+              key={key}
+              style={[styles.tile, negative && styles.tileNegative]}
+              onPress={() => tap(key)}
+              activeOpacity={0.6}
+            >
+              <Text style={styles.tileCount}>{totals[key]}</Text>
+              <Text style={[styles.tileLabel, negative && styles.tileLabelNegative]}>
+                {STAT_DEFS[key].label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       <TouchableOpacity
@@ -210,8 +215,10 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: '#3D2800',
     justifyContent: 'center', alignItems: 'center',
   },
+  tileNegative: { borderColor: '#6B1F1F' },
   tileCount: { color: '#FF8A1F', fontSize: 34, fontWeight: '900' },
   tileLabel: { color: '#C8A040', fontSize: 13, fontWeight: '800', letterSpacing: 1.5, marginTop: 2 },
+  tileLabelNegative: { color: '#C25E5E' },
   undoBar: {
     backgroundColor: '#0D0700', borderTopWidth: 1, borderTopColor: '#3D2800',
     paddingVertical: 16, alignItems: 'center',

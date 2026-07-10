@@ -21,6 +21,7 @@ export interface StatDef {
   label: string;       // tap tile label
   shortLabel: string;  // box-score column header
   points: number;      // contribution to point total
+  negative?: boolean;  // shown in red on the tap grid (fouls, misses, turnovers)
 }
 
 export const STAT_DEFS: Record<StatKey, StatDef> = {
@@ -30,12 +31,12 @@ export const STAT_DEFS: Record<StatKey, StatDef> = {
   rebound:  { key: 'rebound',  label: 'REBOUND',  shortLabel: 'REB', points: 0 },
   steal:    { key: 'steal',    label: 'STEAL',    shortLabel: 'STL', points: 0 },
   assist:   { key: 'assist',   label: 'ASSIST',   shortLabel: 'AST', points: 0 },
-  foul:     { key: 'foul',     label: 'FOUL',     shortLabel: 'PF',  points: 0 },
+  foul:     { key: 'foul',     label: 'FOUL',     shortLabel: 'PF',  points: 0, negative: true },
   block:    { key: 'block',    label: 'BLOCK',    shortLabel: 'BLK', points: 0 },
-  turnover: { key: 'turnover', label: 'TURNOVER', shortLabel: 'TO',  points: 0 },
-  miss2:    { key: 'miss2',    label: 'MISS 2',   shortLabel: '2M',  points: 0 },
-  miss3:    { key: 'miss3',    label: 'MISS 3',   shortLabel: '3M',  points: 0 },
-  ftMiss:   { key: 'ftMiss',   label: 'FT MISS',  shortLabel: 'FTM', points: 0 },
+  turnover: { key: 'turnover', label: 'TURNOVER', shortLabel: 'TO',  points: 0, negative: true },
+  miss2:    { key: 'miss2',    label: 'MISS 2',   shortLabel: '2M',  points: 0, negative: true },
+  miss3:    { key: 'miss3',    label: 'MISS 3',   shortLabel: '3M',  points: 0, negative: true },
+  ftMiss:   { key: 'ftMiss',   label: 'FT MISS',  shortLabel: 'FTM', points: 0, negative: true },
 };
 
 // Most parents never open settings — these defaults are the product.
@@ -50,7 +51,7 @@ export const DEFAULT_ENABLED_STATS: StatKey[] = [
 ];
 
 // Keep the tap grid fat-finger-proof.
-export const MAX_ENABLED_STATS = 8;
+export const MAX_ENABLED_STATS = 10;
 
 export interface KidProfile {
   id: string;
