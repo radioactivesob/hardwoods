@@ -128,9 +128,17 @@ export default function MyKid() {
 
             {selectedId === profile.id && (
               <View style={styles.detail}>
-                <TouchableOpacity style={styles.startBtn} onPress={() => startGame(profile)}>
-                  <Text style={styles.startBtnText}>▶ START GAME</Text>
-                </TouchableOpacity>
+                <View style={styles.actionRow}>
+                  <TouchableOpacity style={[styles.startBtn, { flex: 2 }]} onPress={() => startGame(profile)}>
+                    <Text style={styles.startBtnText}>▶ START GAME</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.seasonBtn}
+                    onPress={() => router.push({ pathname: '/kidseason', params: { kidId: profile.id } })}
+                  >
+                    <Text style={styles.seasonBtnText}>📈 SEASON</Text>
+                  </TouchableOpacity>
+                </View>
 
                 <Text style={styles.sectionLabel}>
                   STATS TO TRACK ({profile.enabledStats.length}/{MAX_ENABLED_STATS})
@@ -263,11 +271,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#0D0700', borderRadius: 8, borderWidth: 1, borderColor: '#2A1A00',
     padding: 14, marginBottom: 8, marginTop: -4,
   },
+  actionRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   startBtn: {
     backgroundColor: '#8B6914', borderRadius: 8, paddingVertical: 14,
-    alignItems: 'center', marginBottom: 16,
+    alignItems: 'center',
   },
   startBtnText: { color: '#FFF', fontSize: 15, fontWeight: '900', letterSpacing: 2 },
+  seasonBtn: {
+    flex: 1, backgroundColor: '#0D0700', borderWidth: 1, borderColor: '#8B6914',
+    borderRadius: 8, paddingVertical: 14, alignItems: 'center',
+  },
+  seasonBtnText: { color: '#C8A040', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
   sectionLabel: { color: '#8B6914', fontSize: 11, fontWeight: '700', letterSpacing: 2, marginBottom: 4 },
   sectionHint: { color: '#555', fontSize: 10, fontStyle: 'italic', marginBottom: 10 },
   statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
