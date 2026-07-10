@@ -137,6 +137,9 @@ export default function Scoreboard() {
         <TouchableOpacity style={styles.adminButton} onPress={() => router.push('/scorebook')}>
           <Text style={styles.adminButtonText}>📋 SCOREBOOK</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.adminButton} onPress={() => router.push('/mykid')}>
+          <Text style={styles.adminButtonText}>⭐ MY KID</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={[styles.adminButton, !canUndo && styles.adminButtonDisabled]}
           onPress={canUndo ? undo : undefined}
