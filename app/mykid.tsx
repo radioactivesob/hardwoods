@@ -66,7 +66,11 @@ export default function MyKid() {
   };
 
   const startGame = (profile: KidProfile) => {
-    Alert.alert('Coming Soon', `Game tracking for ${profile.name} lands in the next build. The profile and stat setup you configure now will be ready for it.`);
+    if (profile.enabledStats.length === 0) {
+      Alert.alert('No Stats Enabled', 'Turn on at least one stat to track before starting a game.');
+      return;
+    }
+    router.push({ pathname: '/kidgame', params: { kidId: profile.id } });
   };
 
   const seasonSummary = (profile: KidProfile) => {
