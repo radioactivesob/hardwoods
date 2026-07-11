@@ -45,6 +45,17 @@ export default function Home() {
           </View>
           <Text style={styles.cardChevron}>›</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity style={styles.card} onPress={() => router.push('/teamseasons')} activeOpacity={0.8}>
+          <Text style={styles.cardIcon}>📈</Text>
+          <View style={styles.cardBody}>
+            <Text style={styles.cardTitle}>TEAM SEASONS</Text>
+            <Text style={styles.cardDesc}>
+              Archived scorebook games — records, trends, and player season averages.
+            </Text>
+          </View>
+          <Text style={styles.cardChevron}>›</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );

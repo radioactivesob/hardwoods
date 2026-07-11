@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useGame } from '../context/GameContext';
+import { useTeamGames, archivedGameFromState } from '../hooks/useTeamGames';
 import { useLandscapeOnly } from '../hooks/useScreenOrientation';
 
 const { width, height } = Dimensions.get('window');
@@ -12,6 +13,7 @@ export default function Scoreboard() {
   useLandscapeOnly();
   const router = useRouter();
   const { state, dispatch, undo, canUndo, totalScore } = useGame();
+  const { archiveGame } = useTeamGames();
   const { teamA, teamB, currentPeriod, teamAFouls, teamBFouls, teamATimeoutsLeft, teamBTimeoutsLeft, rules } = state;
 
   const scoreA = totalScore('A');
@@ -40,6 +42,24 @@ export default function Scoreboard() {
       [
         { text: 'Cancel', style: 'cancel' },
         { text: `Back to ${prevLabel}`, onPress: () => dispatch({ type: 'PREV_PERIOD' }) },
+      ]
+    );
+  };
+
+  const confirmEndGame = () => {
+    Alert.alert(
+      'End Game?',
+      `Final: ${teamA.name} ${scoreA} — ${scoreB} ${teamB.name}\n\nSaving archives the box score to Team Seasons and resets the scoreboard (rosters and rules stay).`,
+      [
+        { text: 'Keep Scoring', style: 'cancel' },
+        {
+          text: 'Save & End',
+          onPress: () => {
+            archiveGame(archivedGameFromState(state));
+            dispatch({ type: 'CLEAR_SCORES' });
+            Alert.alert('Game Saved', 'Find it under Team Seasons on the home screen.');
+          },
+        },
       ]
     );
   };
@@ -145,6 +165,9 @@ export default function Scoreboard() {
           onPress={canUndo ? undo : undefined}
         >
           <Text style={[styles.adminButtonText, { color: canUndo ? '#C8A040' : '#444' }]}>⟵ UNDO</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.adminButton} onPress={confirmEndGame}>
+          <Text style={[styles.adminButtonText, { color: '#C8A040' }]}>■ END GAME</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.adminButton, styles.adminButtonDanger]} onPress={confirmNewGame}>
           <Text style={[styles.adminButtonText, { color: '#FF6B6B' }]}>↺ NEW GAME</Text>

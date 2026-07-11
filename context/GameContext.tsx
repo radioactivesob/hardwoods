@@ -160,6 +160,7 @@ type Action =
   | { type: 'SUBSTITUTE'; team: 'A' | 'B'; outPlayerId: string; inPlayerId: string }
   | { type: 'EDIT_PLAYER_STATS'; team: 'A' | 'B'; playerId: string; stats: PlayerStats }
   | { type: 'RESET_GAME' }
+  | { type: 'CLEAR_SCORES' }
   | { type: 'START_GAME' };
 
 const resetPlayerFouls = (team: TeamConfig): TeamConfig => ({
@@ -300,6 +301,35 @@ function gameReducer(state: GameState, action: Action): GameState {
         presets: state.presets, // preserve saved presets across games
         teamA: { ...initialState.teamA },
         teamB: { ...initialState.teamB },
+      };
+    }
+
+    // End-of-game reset: zero the game but keep rosters and rules so
+    // the next game needs minimal setup.
+    case 'CLEAR_SCORES': {
+      const zeroTeam = (team: TeamConfig): TeamConfig => ({
+        ...team,
+        players: team.players.map(p => ({
+          ...p,
+          isActive: p.isStarting,
+          stats: {
+            points: 0, fgMade: 0, fgAttempted: 0,
+            threeMade: 0, threeAttempted: 0,
+            ftMade: 0, ftAttempted: 0, fouls: 0,
+          },
+        })),
+      });
+      return {
+        ...state,
+        teamA: zeroTeam(state.teamA),
+        teamB: zeroTeam(state.teamB),
+        currentPeriod: 1,
+        periodScores: [{ teamA: 0, teamB: 0 }],
+        teamAFouls: 0,
+        teamBFouls: 0,
+        teamATimeoutsLeft: state.rules.timeoutsPerGame,
+        teamBTimeoutsLeft: state.rules.timeoutsPerGame,
+        gameStarted: false,
       };
     }
 
