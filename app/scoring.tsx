@@ -46,7 +46,7 @@ export default function ScoringPanel() {
         `${countsAsPersonal ? 'Personal foul + team foul' : 'Team foul only'} on ${teamData.name}.\nOpponent shoots ${shots} free throw${shots !== 1 ? 's' : ''}.`,
         [{ text: 'OK' }]
       );
-      setStep({ kind: 'player_select' });
+      router.back();
     } else {
       setStep({ kind: 'action', player });
     }
@@ -59,21 +59,23 @@ export default function ScoringPanel() {
   };
 
   const handleAction = (action: string, player: Player) => {
+    // Completed events return straight to the scoreboard — no extra
+    // BACK tap. Substitutions stay here (coaches sub in batches).
     if (action === '2pts') {
       dispatch({ type: 'ADD_POINTS', team, playerId: player.id, points: 2 });
-      setStep({ kind: 'player_select' });
+      router.back();
     } else if (action === 'miss_2') {
       dispatch({ type: 'ADD_POINTS', team, playerId: player.id, points: 2, missed: true });
-      setStep({ kind: 'player_select' });
+      router.back();
     } else if (action === '3pts') {
       dispatch({ type: 'ADD_POINTS', team, playerId: player.id, points: 3 });
-      setStep({ kind: 'player_select' });
+      router.back();
     } else if (action === 'miss_3') {
       dispatch({ type: 'ADD_POINTS', team, playerId: player.id, points: 3, missed: true });
-      setStep({ kind: 'player_select' });
+      router.back();
     } else if (action === 'foul') {
       dispatch({ type: 'ADD_FOUL', team, playerId: player.id });
-      setStep({ kind: 'player_select' });
+      router.back();
     } else if (action === 'timeout') {
       handleTeamAction('timeout');
     } else if (action === 'foul_1') {
@@ -91,7 +93,7 @@ export default function ScoringPanel() {
     dispatch({ type: 'ADD_POINTS', team, playerId: step.player.id, points: pts, isFreeThrow: true, made });
     const nextIdx = step.shotIndex + 1;
     if (nextIdx >= step.shotCount) {
-      setStep({ kind: 'player_select' });
+      router.back();
     } else {
       setStep({ ...step, shotIndex: nextIdx, made: step.made + (made ? 1 : 0) });
     }
@@ -111,7 +113,7 @@ export default function ScoringPanel() {
         `${teamData.name} timeout.\n${remaining - 1} timeout${remaining - 1 !== 1 ? 's' : ''} remaining.`,
         [{ text: 'OK' }]
       );
-      setStep({ kind: 'player_select' });
+      router.back();
     } else if (action === 'technical') {
       const shots = state.rules.technicalFoulShots;
       Alert.alert(
@@ -123,7 +125,7 @@ export default function ScoringPanel() {
             onPress: () => {
               dispatch({ type: 'ADD_TECHNICAL', team });
               Alert.alert('Technical Foul — Coach', `Team foul on ${teamData.name}.\nOpponent shoots ${shots} free throw${shots !== 1 ? 's' : ''}.`, [{ text: 'OK' }]);
-              setStep({ kind: 'player_select' });
+              router.back();
             },
           },
           {
