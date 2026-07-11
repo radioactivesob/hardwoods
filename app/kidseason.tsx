@@ -110,7 +110,13 @@ export default function KidSeason() {
         <Text style={styles.title}>
           {profile.number ? `#${profile.number} ` : ''}{profile.name.toUpperCase()}
         </Text>
-        <View style={{ width: 50 }} />
+        {games.length > 0 ? (
+          <TouchableOpacity onPress={() => router.push({ pathname: '/kidshare', params: { kidId: profile.id } })}>
+            <Text style={styles.shareText}>📤 SHARE</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 50 }} />
+        )}
       </View>
 
       {games.length === 0 ? (
@@ -175,6 +181,7 @@ export default function KidSeason() {
               <TouchableOpacity
                 key={g.id}
                 style={styles.gameRow}
+                onPress={() => router.push({ pathname: '/kidshare', params: { kidId: profile.id, gameId: g.id } })}
                 onLongPress={() => handleDeleteGame(g)}
                 activeOpacity={0.8}
               >
@@ -191,7 +198,7 @@ export default function KidSeason() {
               </TouchableOpacity>
             );
           })}
-          <Text style={styles.deleteHint}>Long-press a game to delete it.</Text>
+          <Text style={styles.deleteHint}>Tap a game to share it · long-press to delete.</Text>
 
           <View style={{ height: 20 }} />
         </ScrollView>
@@ -208,6 +215,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2, borderBottomColor: '#8B6914',
   },
   backText: { color: '#8B6914', fontSize: 13, fontWeight: '700' },
+  shareText: { color: '#C8A040', fontSize: 13, fontWeight: '700' },
   title: { color: '#FFF', fontSize: 16, fontWeight: '900', letterSpacing: 2 },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
   emptyTitle: { color: '#C8A040', fontSize: 17, fontWeight: '800', marginBottom: 10 },

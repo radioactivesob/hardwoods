@@ -94,9 +94,9 @@ export default function KidGame() {
         {
           text: 'Save Game',
           onPress: () => {
-            saveGame(kidId!, events, { opponent, date: startedAt });
+            const game = saveGame(kidId!, events, { opponent, date: startedAt });
             AsyncStorage.removeItem(IN_PROGRESS_KEY);
-            router.back();
+            router.replace({ pathname: '/kidshare', params: { kidId: kidId!, gameId: game.id } });
           },
         },
         {

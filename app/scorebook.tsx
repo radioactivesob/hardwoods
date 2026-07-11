@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert, Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { captureRef } from 'react-native-view-shot';
 import { useGame, Player, PlayerStats } from '../context/GameContext';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -14,6 +15,8 @@ export default function Scorebook() {
   const { state, dispatch, totalScore } = useGame();
   const { teamA, teamB, periodScores } = state;
   const [exporting, setExporting] = useState(false);
+  const [sharingImg, setSharingImg] = useState(false);
+  const bookRef = useRef<View>(null);
   const [editMode, setEditMode] = useState(false);
   const [editTarget, setEditTarget] = useState<EditTarget>(null);
   const [editStats, setEditStats] = useState<PlayerStats | null>(null);
@@ -142,6 +145,20 @@ export default function Scorebook() {
     }
   };
 
+  // Captures the whole box score (banner + both team tables) as one
+  // JPEG for texting — the PDF export stays for the official record.
+  const shareImage = async () => {
+    try {
+      setSharingImg(true);
+      const uri = await captureRef(bookRef, { format: 'jpg', quality: 0.95 });
+      await Sharing.shareAsync(uri, { mimeType: 'image/jpeg', dialogTitle: 'Share Box Score' });
+    } catch (e) {
+      Alert.alert('Share Failed', 'Could not create the image. Try again.');
+    } finally {
+      setSharingImg(false);
+    }
+  };
+
   const renderPlayerRow = (p: Player, team: 'A' | 'B') => {
     const s = p.stats;
     return (
@@ -203,6 +220,13 @@ export default function Scorebook() {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
+            style={[styles.exportBtn, sharingImg && styles.exportBtnDisabled]}
+            onPress={shareImage}
+            disabled={sharingImg}
+          >
+            <Text style={styles.exportBtnText}>{sharingImg ? '...' : '📤 IMG'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={[styles.exportBtn, exporting && styles.exportBtnDisabled]}
             onPress={exportPDF}
             disabled={exporting}
@@ -219,6 +243,7 @@ export default function Scorebook() {
       )}
 
       <ScrollView style={styles.scroll}>
+        <View ref={bookRef} collapsable={false} style={{ backgroundColor: '#1A0F00', paddingBottom: 8 }}>
         <View style={styles.scoreBanner}>
           <View style={styles.finalTeam}>
             <Text style={[styles.finalTeamName, { color: teamA.color }]}>{teamA.name}</Text>
@@ -276,6 +301,7 @@ export default function Scorebook() {
             </View>
           </View>
         ))}
+        </View>
 
         <View style={{ height: 40 }} />
       </ScrollView>
