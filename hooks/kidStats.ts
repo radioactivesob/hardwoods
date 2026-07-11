@@ -75,7 +75,12 @@ export interface KidProfile {
   teamName?: string;
   color?: string; // accent color across My Kid screens; defaults to ball orange
   enabledStats: StatKey[];
+  currentSeason?: number; // absent = 1 (pre-seasons data)
   createdAt: number;
+}
+
+export function profileSeason(profile: KidProfile): number {
+  return profile.currentSeason ?? 1;
 }
 
 export const DEFAULT_KID_COLOR = '#FF8A1F';
@@ -101,8 +106,13 @@ export interface GameEntry {
   kidId: string;
   date: number; // epoch ms, game day
   opponent?: string;
+  season?: number; // absent = 1 (games saved before seasons existed)
   events: StatEvent[];
   totals: Record<StatKey, number>; // derived from events at save time
+}
+
+export function gameSeason(game: GameEntry): number {
+  return game.season ?? 1;
 }
 
 export function emptyTotals(): Record<StatKey, number> {

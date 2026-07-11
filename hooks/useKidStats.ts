@@ -7,6 +7,7 @@ import {
   StatKey,
   DEFAULT_ENABLED_STATS,
   totalsFromEvents,
+  profileSeason,
 } from './kidStats';
 
 const STORAGE_KEY = 'hardwoods_kids_v1';
@@ -67,16 +68,27 @@ export function useKidStats() {
   }, [update]);
 
   const saveGame = useCallback((kidId: string, events: StatEvent[], opts?: { opponent?: string; date?: number }) => {
+    const profile = store.profiles.find(p => p.id === kidId);
     const game: GameEntry = {
       id: Date.now().toString(),
       kidId,
       date: opts?.date ?? Date.now(),
       opponent: opts?.opponent?.trim() || undefined,
+      season: profile ? profileSeason(profile) : 1,
       events,
       totals: totalsFromEvents(events),
     };
     update(prev => ({ ...prev, games: [game, ...prev.games] }));
     return game;
+  }, [update, store.profiles]);
+
+  const startNewSeason = useCallback((kidId: string) => {
+    update(prev => ({
+      ...prev,
+      profiles: prev.profiles.map(p =>
+        p.id === kidId ? { ...p, currentSeason: profileSeason(p) + 1 } : p,
+      ),
+    }));
   }, [update]);
 
   const deleteGame = useCallback((id: string) => {
@@ -98,5 +110,6 @@ export function useKidStats() {
     saveGame,
     deleteGame,
     gamesForKid,
+    startNewSeason,
   };
 }

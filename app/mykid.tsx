@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useKidStats } from '../hooks/useKidStats';
-import { STAT_DEFS, StatKey, MAX_ENABLED_STATS, STAT_ORDER, KidProfile, pointsFromTotals, KID_COLORS, DEFAULT_KID_COLOR, kidColor } from '../hooks/kidStats';
+import { STAT_DEFS, StatKey, MAX_ENABLED_STATS, STAT_ORDER, KidProfile, pointsFromTotals, KID_COLORS, DEFAULT_KID_COLOR, kidColor, profileSeason, gameSeason } from '../hooks/kidStats';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
 const ALL_ORIENTATIONS = ['portrait', 'portrait-upside-down', 'landscape-left', 'landscape-right'] as const;
@@ -13,7 +13,7 @@ const ALL_ORIENTATIONS = ['portrait', 'portrait-upside-down', 'landscape-left', 
 export default function MyKid() {
   useAllOrientations();
   const router = useRouter();
-  const { profiles, loading, addProfile, updateProfile, deleteProfile, gamesForKid } = useKidStats();
+  const { profiles, loading, addProfile, updateProfile, deleteProfile, gamesForKid, startNewSeason } = useKidStats();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState('');
@@ -70,11 +70,30 @@ export default function MyKid() {
   };
 
   const seasonSummary = (profile: KidProfile) => {
-    const games = gamesForKid(profile.id);
-    if (games.length === 0) return 'No games yet';
+    const season = profileSeason(profile);
+    const games = gamesForKid(profile.id).filter(g => gameSeason(g) === season);
+    const prefix = season > 1 ? `Season ${season} · ` : '';
+    if (games.length === 0) return `${prefix}No games yet`;
     const totalPoints = games.reduce((sum, g) => sum + pointsFromTotals(g.totals), 0);
     const ppg = (totalPoints / games.length).toFixed(1);
-    return `${games.length} game${games.length === 1 ? '' : 's'} · ${ppg} pts/game`;
+    return `${prefix}${games.length} game${games.length === 1 ? '' : 's'} · ${ppg} pts/game`;
+  };
+
+  const handleNewSeason = (profile: KidProfile) => {
+    const season = profileSeason(profile);
+    const gamesThisSeason = gamesForKid(profile.id).filter(g => gameSeason(g) === season).length;
+    if (gamesThisSeason === 0) {
+      Alert.alert('No Games This Season', `Season ${season} has no games yet — new games already count toward it.`);
+      return;
+    }
+    Alert.alert(
+      `Start Season ${season + 1}?`,
+      `Season ${season} (${gamesThisSeason} game${gamesThisSeason === 1 ? '' : 's'}) stays saved — you can revisit it anytime from the season view. New games will count toward Season ${season + 1}.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Start New Season', onPress: () => startNewSeason(profile.id) },
+      ],
+    );
   };
 
   return (
@@ -169,6 +188,10 @@ export default function MyKid() {
                     );
                   })}
                 </View>
+
+                <TouchableOpacity style={styles.newSeasonBtn} onPress={() => handleNewSeason(profile)}>
+                  <Text style={styles.newSeasonBtnText}>⟳ START NEW SEASON</Text>
+                </TouchableOpacity>
 
                 <TouchableOpacity style={styles.deleteRow} onPress={() => handleDelete(profile)}>
                   <Text style={styles.deleteRowText}>DELETE PROFILE</Text>
@@ -314,7 +337,12 @@ const styles = StyleSheet.create({
   colorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16, marginTop: 4 },
   colorSwatch: { width: 30, height: 30, borderRadius: 15, borderWidth: 2, borderColor: 'transparent' },
   colorSwatchActive: { borderColor: '#FFF', transform: [{ scale: 1.15 }] },
-  deleteRow: { alignItems: 'center', marginTop: 16, paddingVertical: 8 },
+  newSeasonBtn: {
+    borderWidth: 1, borderColor: '#3D2800', borderRadius: 8,
+    paddingVertical: 10, alignItems: 'center', marginTop: 16,
+  },
+  newSeasonBtnText: { color: '#C8A040', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+  deleteRow: { alignItems: 'center', marginTop: 8, paddingVertical: 8 },
   deleteRowText: { color: '#7A1A1A', fontSize: 11, fontWeight: '700', letterSpacing: 1 },
   overlay: { flex: 1, backgroundColor: '#000000BB', justifyContent: 'center', alignItems: 'center' },
   modal: {

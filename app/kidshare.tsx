@@ -8,6 +8,7 @@ import * as Sharing from 'expo-sharing';
 import { useKidStats } from '../hooks/useKidStats';
 import {
   STAT_DEFS, GameEntry, pointsFromTotals, shootingLine, kidColor,
+  profileSeason, gameSeason,
 } from '../hooks/kidStats';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
@@ -23,7 +24,7 @@ function shotLine(made: number, attempted: number) {
 export default function KidShare() {
   useAllOrientations();
   const router = useRouter();
-  const { kidId, gameId } = useLocalSearchParams<{ kidId: string; gameId?: string }>();
+  const { kidId, gameId, season: seasonParam } = useLocalSearchParams<{ kidId: string; gameId?: string; season?: string }>();
   const { profiles, gamesForKid } = useKidStats();
   const cardRef = useRef<View>(null);
   const [sharing, setSharing] = useState(false);
@@ -32,8 +33,11 @@ export default function KidShare() {
   if (!profile) return <SafeAreaView style={styles.container} />;
 
   const accent = kidColor(profile);
-  const games = gamesForKid(profile.id);
-  const game: GameEntry | null = gameId ? games.find(g => g.id === gameId) ?? null : null;
+  const season = seasonParam ? parseInt(seasonParam, 10) : profileSeason(profile);
+  const games = gamesForKid(profile.id).filter(g => gameSeason(g) === season);
+  const game: GameEntry | null = gameId
+    ? gamesForKid(profile.id).find(g => g.id === gameId) ?? null
+    : null;
   const seasonMode = !game;
 
   // Rows for the card: label + value pairs, only stats with data.
@@ -69,7 +73,7 @@ export default function KidShare() {
       { fgMade: 0, fgAttempted: 0, rebounds: 0, steals: 0, assists: 0 },
     );
     headline = games.length ? (totalPoints / games.length).toFixed(1) : '0';
-    subtitle = `Season so far  ·  ${games.length} game${games.length === 1 ? '' : 's'}`;
+    subtitle = `Season ${season}  ·  ${games.length} game${games.length === 1 ? '' : 's'}`;
     rows = [
       { label: 'TOTAL POINTS', value: `${totalPoints}` },
       { label: 'FIELD GOALS', value: shotLine(agg.fgMade, agg.fgAttempted) ?? '' },

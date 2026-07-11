@@ -6,6 +6,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useKidStats } from '../hooks/useKidStats';
 import {
   STAT_DEFS, StatKey, GameEntry, pointsFromTotals, shootingLine, kidColor,
+  profileSeason, gameSeason,
 } from '../hooks/kidStats';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
@@ -59,18 +60,25 @@ export default function KidSeason() {
   const { profiles, gamesForKid, deleteGame } = useKidStats();
   const profile = profiles.find(p => p.id === kidId) ?? null;
   const [metricKey, setMetricKey] = useState<MetricKey>('pts');
+  const [seasonPick, setSeasonPick] = useState<number | null>(null);
 
   if (!profile) return <SafeAreaView style={styles.container} />;
 
   const accent = kidColor(profile);
-  const games = gamesForKid(profile.id); // date ascending
+  const allGames = gamesForKid(profile.id); // date ascending
+  const currentSeason = profileSeason(profile);
+  const seasons = Array.from(
+    new Set([...allGames.map(gameSeason), currentSeason]),
+  ).sort((a, b) => a - b);
+  const season = seasonPick ?? currentSeason;
+  const games = allGames.filter(g => gameSeason(g) === season);
   const metrics = buildMetrics(games);
   const metric = metrics.find(m => m.key === metricKey) ?? metrics[0];
   const values = games.map(g => metric.value(g));
   const maxValue = Math.max(...values, 1);
 
   const totalPoints = games.reduce((s, g) => s + pointsFromTotals(g.totals), 0);
-  const season = games.reduce(
+  const agg = games.reduce(
     (acc, g) => {
       const line = shootingLine(g.totals);
       acc.fgMade += line.fgMade; acc.fgAttempted += line.fgAttempted;
@@ -80,7 +88,7 @@ export default function KidSeason() {
     },
     { fgMade: 0, fgAttempted: 0, rebounds: 0, steals: 0 },
   );
-  const seasonFgPct = season.fgAttempted > 0 ? Math.round((season.fgMade / season.fgAttempted) * 100) : null;
+  const seasonFgPct = agg.fgAttempted > 0 ? Math.round((agg.fgMade / agg.fgAttempted) * 100) : null;
 
   const handleDeleteGame = (game: GameEntry) => {
     const pts = pointsFromTotals(game.totals);
@@ -98,7 +106,7 @@ export default function KidSeason() {
     { label: 'GAMES', value: `${games.length}` },
     { label: 'PTS/GAME', value: games.length ? (totalPoints / games.length).toFixed(1) : '—' },
     ...(seasonFgPct !== null ? [{ label: 'SEASON FG%', value: `${seasonFgPct}%` }] : []),
-    ...(season.rebounds > 0 ? [{ label: 'REBOUNDS', value: `${season.rebounds}` }] : []),
+    ...(agg.rebounds > 0 ? [{ label: 'REBOUNDS', value: `${agg.rebounds}` }] : []),
   ].slice(0, 4);
 
   return (
@@ -111,7 +119,7 @@ export default function KidSeason() {
           {profile.number ? `#${profile.number} ` : ''}{profile.name.toUpperCase()}
         </Text>
         {games.length > 0 ? (
-          <TouchableOpacity onPress={() => router.push({ pathname: '/kidshare', params: { kidId: profile.id } })}>
+          <TouchableOpacity onPress={() => router.push({ pathname: '/kidshare', params: { kidId: profile.id, season: String(season) } })}>
             <Text style={styles.shareText}>📤 SHARE</Text>
           </TouchableOpacity>
         ) : (
@@ -119,7 +127,7 @@ export default function KidSeason() {
         )}
       </View>
 
-      {games.length === 0 ? (
+      {allGames.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>No games yet</Text>
           <Text style={styles.emptyHint}>
@@ -128,6 +136,31 @@ export default function KidSeason() {
         </View>
       ) : (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent}>
+          {seasons.length > 1 && (
+            <View style={styles.seasonRow}>
+              {seasons.map(s => (
+                <TouchableOpacity
+                  key={s}
+                  style={[styles.seasonChip, season === s && { borderColor: accent, backgroundColor: '#3D2800' }]}
+                  onPress={() => setSeasonPick(s)}
+                >
+                  <Text style={[styles.seasonChipText, season === s && { color: accent }]}>
+                    SEASON {s}{s === currentSeason ? ' ·' : ''}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {games.length === 0 && (
+            <View style={styles.emptySeason}>
+              <Text style={styles.emptyHint}>
+                Season {season} is a fresh start — no games tracked yet.
+              </Text>
+            </View>
+          )}
+
+          {games.length > 0 && (<>
           <View style={styles.summaryRow}>
             {summaryTiles.map(t => (
               <View key={t.label} style={styles.summaryTile}>
@@ -199,6 +232,7 @@ export default function KidSeason() {
             );
           })}
           <Text style={styles.deleteHint}>Tap a game to share it · long-press to delete.</Text>
+          </>)}
 
           <View style={{ height: 20 }} />
         </ScrollView>
@@ -218,6 +252,13 @@ const styles = StyleSheet.create({
   shareText: { color: '#C8A040', fontSize: 13, fontWeight: '700' },
   title: { color: '#FFF', fontSize: 16, fontWeight: '900', letterSpacing: 2 },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
+  emptySeason: { alignItems: 'center', paddingVertical: 24 },
+  seasonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 16 },
+  seasonChip: {
+    borderWidth: 1, borderColor: '#2A1A00', borderRadius: 14,
+    paddingHorizontal: 12, paddingVertical: 5, backgroundColor: '#0D0700',
+  },
+  seasonChipText: { color: '#555', fontSize: 11, fontWeight: '700' },
   emptyTitle: { color: '#C8A040', fontSize: 17, fontWeight: '800', marginBottom: 10 },
   emptyHint: { color: '#666', fontSize: 13, lineHeight: 20, textAlign: 'center' },
   scrollContent: { padding: 16, maxWidth: 560, width: '100%', alignSelf: 'center' },
