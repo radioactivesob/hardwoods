@@ -102,6 +102,18 @@ export default function TeamSetup() {
     setTeam(prev => ({ ...prev, players: [...prev.players, newPlayer(activeTeam)] }));
   };
 
+  // Coaches order rosters by position — swap a player with its neighbor.
+  const movePlayer = (id: string, direction: -1 | 1) => {
+    setTeam(prev => {
+      const idx = prev.players.findIndex(p => p.id === id);
+      const swap = idx + direction;
+      if (idx < 0 || swap < 0 || swap >= prev.players.length) return prev;
+      const players = [...prev.players];
+      [players[idx], players[swap]] = [players[swap], players[idx]];
+      return { ...prev, players };
+    });
+  };
+
   const removePlayer = (id: string) => {
     if (team.players.length <= 5) return;
     setTeam(prev => ({ ...prev, players: prev.players.filter(p => p.id !== id) }));
@@ -201,6 +213,22 @@ export default function TeamSetup() {
 
         {team.players.map((p, idx) => (
           <View key={p.id} style={[styles.playerRow, { borderLeftColor: team.color }]}>
+            <View style={styles.moveCol}>
+              <TouchableOpacity
+                style={styles.moveBtn}
+                onPress={() => movePlayer(p.id, -1)}
+                disabled={idx === 0}
+              >
+                <Text style={[styles.moveBtnText, idx === 0 && styles.moveBtnDisabled]}>▲</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.moveBtn}
+                onPress={() => movePlayer(p.id, 1)}
+                disabled={idx === team.players.length - 1}
+              >
+                <Text style={[styles.moveBtnText, idx === team.players.length - 1 && styles.moveBtnDisabled]}>▼</Text>
+              </TouchableOpacity>
+            </View>
             <Text style={styles.playerIdx}>{idx + 1}</Text>
             <TextInput
               style={styles.numInput}
@@ -340,6 +368,10 @@ const styles = StyleSheet.create({
     borderRadius: 6, borderLeftWidth: 3, marginBottom: 6, paddingHorizontal: 8, paddingVertical: 6, gap: 6,
   },
   playerIdx: { color: '#555', fontSize: 11, width: 16, textAlign: 'center' },
+  moveCol: { justifyContent: 'center', gap: 2 },
+  moveBtn: { paddingHorizontal: 4, paddingVertical: 1 },
+  moveBtnText: { color: '#8B6914', fontSize: 11 },
+  moveBtnDisabled: { color: '#2A1A00' },
   numInput: {
     backgroundColor: '#1A0F00', color: '#FFF', borderWidth: 1, borderColor: '#2A1A00',
     borderRadius: 4, width: 44, paddingHorizontal: 6, paddingVertical: 6,
