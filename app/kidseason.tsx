@@ -3,6 +3,8 @@ import {
   View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { useKidStats } from '../hooks/useKidStats';
 import {
   STAT_DEFS, StatKey, GameEntry, pointsFromTotals, shootingLine, kidColor,
@@ -61,6 +63,7 @@ export default function KidSeason() {
   const profile = profiles.find(p => p.id === kidId) ?? null;
   const [metricKey, setMetricKey] = useState<MetricKey>('pts');
   const [seasonPick, setSeasonPick] = useState<number | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   if (!profile) return <SafeAreaView style={styles.container} />;
 
@@ -100,6 +103,68 @@ export default function KidSeason() {
         { text: 'Delete', style: 'destructive', onPress: () => deleteGame(game.id) },
       ],
     );
+  };
+
+  const exportReport = async () => {
+    try {
+      setExporting(true);
+      const pct = (m: number, a: number) => (a > 0 ? `${m}/${a} (${Math.round((m / a) * 100)}%)` : '—');
+      const lines = games.map(g => shootingLine(g.totals));
+      const three = lines.reduce((acc, l) => ({ m: acc.m + l.threeMade, a: acc.a + l.threeAttempted }), { m: 0, a: 0 });
+      const ft = lines.reduce((acc, l) => ({ m: acc.m + l.ftMade, a: acc.a + l.ftAttempted }), { m: 0, a: 0 });
+      const sum = (key: StatKey) => games.reduce((s, g) => s + (g.totals[key] ?? 0), 0);
+      const counting: [string, number][] = [
+        ['Rebounds', sum('rebound')], ['Steals', sum('steal')], ['Assists', sum('assist')],
+        ['Blocks', sum('block')], ['Turnovers', sum('turnover')], ['Fouls', sum('foul')],
+      ];
+      const best = games.reduce((b, g) => (pointsFromTotals(g.totals) > pointsFromTotals(b.totals) ? g : b), games[0]);
+      const bestPts = pointsFromTotals(best.totals);
+
+      const gameRows = games.map(g => {
+        const l = shootingLine(g.totals);
+        return `<tr><td>${formatDate(g.date)}</td><td>${g.opponent ?? '—'}</td><td><strong>${pointsFromTotals(g.totals)}</strong></td><td>${pct(l.fgMade, l.fgAttempted)}</td><td>${pct(l.ftMade, l.ftAttempted)}</td><td>${g.totals.rebound ?? 0}</td><td>${g.totals.steal ?? 0}</td><td>${g.totals.assist ?? 0}</td><td>${g.totals.foul ?? 0}</td></tr>`;
+      }).join('');
+
+      const summaryRows = [
+        ['Games', `${games.length}`],
+        ['Total points', `${totalPoints}`],
+        ['Points per game', (totalPoints / games.length).toFixed(1)],
+        ['Field goals', pct(agg.fgMade, agg.fgAttempted)],
+        ['3-pointers', pct(three.m, three.a)],
+        ['Free throws', pct(ft.m, ft.a)],
+        ...counting.filter(([, v]) => v > 0).map(([label, v]) => [label, `${v}`] as [string, string]),
+      ].map(([label, v]) => `<tr><td>${label}</td><td><strong>${v}</strong></td></tr>`).join('');
+
+      const html = `<html><head><meta charset="utf-8"><style>
+        body{font-family:-apple-system,Helvetica,sans-serif;color:#1A0F00;padding:32px}
+        .brand{text-align:center;color:#8B6914;font-weight:800;letter-spacing:6px;font-size:13px}
+        h1{text-align:center;color:${accent};margin:8px 0 2px;font-size:28px}
+        .sub{text-align:center;color:#666;font-size:12px;margin-bottom:28px}
+        h2{color:#8B6914;font-size:13px;letter-spacing:2px;border-bottom:2px solid #8B6914;padding-bottom:4px;margin-top:28px}
+        table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+        td,th{padding:6px 8px;border-bottom:1px solid #eee;text-align:left}
+        th{color:#8B6914;font-size:10px;letter-spacing:1px}
+        .hl{background:#FBF6EA;border-left:4px solid ${accent};padding:10px 14px;margin-top:8px;font-size:13px}
+        .foot{text-align:center;color:#bbb;font-size:10px;margin-top:36px;font-style:italic}
+      </style></head><body>
+        <div class="brand">HARDWOODS</div>
+        <h1>${profile.number ? `#${profile.number} ` : ''}${profile.name}</h1>
+        <div class="sub">${profile.teamName ? `${profile.teamName} · ` : ''}Season ${season} Report · ${formatDate(games[0].date)} – ${formatDate(games[games.length - 1].date)}</div>
+        <h2>SEASON SUMMARY</h2><table>${summaryRows}</table>
+        <h2>HIGHLIGHT</h2>
+        <div class="hl">Best game: <strong>${bestPts} points</strong> on ${formatDate(best.date)}${best.opponent ? ` vs. ${best.opponent}` : ''}</div>
+        <h2>GAME BY GAME</h2>
+        <table><tr><th>DATE</th><th>OPPONENT</th><th>PTS</th><th>FG</th><th>FT</th><th>REB</th><th>STL</th><th>AST</th><th>PF</th></tr>${gameRows}</table>
+        <div class="foot">tracked from the stands with Hardwoods</div>
+      </body></html>`;
+
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `${profile.name} — Season ${season} Report`, UTI: 'com.adobe.pdf' });
+    } catch (e) {
+      Alert.alert('Export Failed', 'Could not create the report. Try again.');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const summaryTiles = [
@@ -232,6 +297,15 @@ export default function KidSeason() {
             );
           })}
           <Text style={styles.deleteHint}>Tap a game to share it · long-press to delete.</Text>
+
+          <TouchableOpacity
+            style={[styles.reportBtn, exporting && { opacity: 0.5 }]}
+            onPress={exporting ? undefined : exportReport}
+          >
+            <Text style={styles.reportBtnText}>
+              {exporting ? 'PREPARING…' : `📄 SEASON ${season} REPORT (PDF)`}
+            </Text>
+          </TouchableOpacity>
           </>)}
 
           <View style={{ height: 20 }} />
@@ -299,4 +373,9 @@ const styles = StyleSheet.create({
   gameTitle: { color: '#FFF', fontSize: 14, fontWeight: '700', marginBottom: 3 },
   gameMeta: { color: '#666', fontSize: 11 },
   deleteHint: { color: '#444', fontSize: 10, fontStyle: 'italic', textAlign: 'center', marginTop: 4 },
+  reportBtn: {
+    borderWidth: 1, borderColor: '#8B6914', borderRadius: 8,
+    paddingVertical: 12, alignItems: 'center', marginTop: 16,
+  },
+  reportBtnText: { color: '#C8A040', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
 });
