@@ -31,6 +31,14 @@ interface SimpleGame {
 
 const FRESH: SimpleGame = { nameA: 'HOME', nameB: 'GUEST', period: 1, events: [] };
 
+const REGULATION_PERIODS = 4;
+
+function periodName(p: number): string {
+  if (p <= REGULATION_PERIODS) return `Q${p}`;
+  const ot = p - REGULATION_PERIODS;
+  return ot === 1 ? 'OT' : `${ot}OT`;
+}
+
 const EVENT_LABEL: Record<EventKind, string> = {
   points2: '+2', points3: '+3', ft: 'FT +1',
   foul: 'FOUL', tech: 'TECH', timeout: 'T.O.',
@@ -146,7 +154,7 @@ export default function SimpleGame() {
         />
         <Text style={[styles.score, { color }]}>{score(team)}</Text>
         <Text style={styles.meta}>
-          FOULS (Q{game.period}): {periodFouls(team)}   ·   T.O. USED: {timeoutsUsed(team)}
+          FOULS ({periodName(game.period)}): {periodFouls(team)}   ·   T.O. USED: {timeoutsUsed(team)}
         </Text>
         <View style={styles.btnGrid}>
           {(Object.keys(EVENT_LABEL) as EventKind[]).map(kind => (
@@ -179,10 +187,10 @@ export default function SimpleGame() {
           <View style={styles.centerCol}>
             <Text style={styles.brand}>HARDWOODS</Text>
             <Text style={styles.periodLabel}>PERIOD</Text>
-            <Text style={styles.periodValue}>Q{game.period}</Text>
+            <Text style={styles.periodValue}>{periodName(game.period)}</Text>
             {game.period < MAX_PERIODS && (
               <TouchableOpacity style={styles.periodBtn} onPress={advancePeriod}>
-                <Text style={styles.periodBtnText}>Q{game.period + 1} →</Text>
+                <Text style={styles.periodBtnText}>{periodName(game.period + 1)} →</Text>
               </TouchableOpacity>
             )}
             <View style={{ flex: 1 }} />

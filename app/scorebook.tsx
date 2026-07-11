@@ -24,6 +24,13 @@ export default function Scorebook() {
   const scoreA = totalScore('A');
   const scoreB = totalScore('B');
 
+  // Periods beyond regulation are overtime: OT, 2OT, ...
+  const periodLabel = (i: number) => {
+    if (i < state.rules.numPeriods) return `Q${i + 1}`;
+    const ot = i - state.rules.numPeriods + 1;
+    return ot === 1 ? 'OT' : `${ot}OT`;
+  };
+
   const openEdit = (player: Player, team: 'A' | 'B') => {
     setEditTarget({ player, team });
     setEditStats({ ...player.stats });
@@ -92,7 +99,7 @@ export default function Scorebook() {
 
     const totA = teamTotals(teamA);
     const totB = teamTotals(teamB);
-    const scoreRows = periodScores.map((s, i) => `<tr><td>Q${i + 1}</td><td>${s.teamA}</td><td>${s.teamB}</td></tr>`).join('');
+    const scoreRows = periodScores.map((s, i) => `<tr><td>${periodLabel(i)}</td><td>${s.teamA}</td><td>${s.teamB}</td></tr>`).join('');
     const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Hardwoods Scorebook</title>
@@ -261,7 +268,7 @@ export default function Scorebook() {
           <View style={styles.periodHeaderRow}>
             <Text style={[styles.periodCell, styles.periodHeaderCell]}>PERIOD</Text>
             {periodScores.map((_, i) => (
-              <Text key={i} style={[styles.periodCell, styles.periodHeaderCell]}>Q{i + 1}</Text>
+              <Text key={i} style={[styles.periodCell, styles.periodHeaderCell]}>{periodLabel(i)}</Text>
             ))}
             <Text style={[styles.periodCell, styles.periodHeaderCell]}>TOT</Text>
           </View>
