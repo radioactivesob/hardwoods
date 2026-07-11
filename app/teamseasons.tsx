@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTeamGames, ArchivedPlayer } from '../hooks/useTeamGames';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
@@ -25,7 +25,8 @@ export default function TeamSeasons() {
   useAllOrientations();
   const router = useRouter();
   const { loading, teams, gamesForTeam, deleteGame } = useTeamGames();
-  const [selected, setSelected] = useState<string | null>(null);
+  const { team: teamParam } = useLocalSearchParams<{ team?: string }>();
+  const [selected, setSelected] = useState<string | null>(teamParam ?? null);
   const [opponentFilter, setOpponentFilter] = useState<string | null>(null);
 
   const teamList = teams();
