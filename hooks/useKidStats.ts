@@ -37,12 +37,13 @@ export function useKidStats() {
     });
   }, []);
 
-  const addProfile = useCallback((name: string, number?: string, teamName?: string) => {
+  const addProfile = useCallback((name: string, number?: string, teamName?: string, color?: string) => {
     const profile: KidProfile = {
       id: Date.now().toString(),
       name,
       number,
       teamName,
+      color,
       enabledStats: [...DEFAULT_ENABLED_STATS],
       createdAt: Date.now(),
     };

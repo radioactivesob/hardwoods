@@ -4,9 +4,10 @@ import {
   TextInput, Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useKeepAwake } from 'expo-keep-awake';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useKidStats } from '../hooks/useKidStats';
-import { STAT_DEFS, StatEvent, StatKey, totalsFromEvents, pointsFromTotals } from '../hooks/kidStats';
+import { STAT_DEFS, StatEvent, StatKey, totalsFromEvents, pointsFromTotals, sortByStatOrder, kidColor } from '../hooks/kidStats';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
 // In-progress game survives app restarts — a parent at a real game
@@ -22,6 +23,9 @@ interface InProgressGame {
 
 export default function KidGame() {
   useAllOrientations();
+  // A parent tracks for a whole game with long gaps between taps —
+  // the screen must not auto-lock mid-game. Released on unmount.
+  useKeepAwake();
   const router = useRouter();
   const { kidId } = useLocalSearchParams<{ kidId: string }>();
   const { profiles, saveGame } = useKidStats();
@@ -116,6 +120,7 @@ export default function KidGame() {
   const totals = totalsFromEvents(events);
   const points = pointsFromTotals(totals);
   const lastEvent = events[events.length - 1];
+  const accent = kidColor(profile);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -141,12 +146,12 @@ export default function KidGame() {
       </View>
 
       <View style={styles.scoreBar}>
-        <Text style={styles.scorePoints}>{points}</Text>
+        <Text style={[styles.scorePoints, { color: accent }]}>{points}</Text>
         <Text style={styles.scoreLabel}>POINTS</Text>
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.grid}>
-        {profile.enabledStats.map(key => {
+        {sortByStatOrder(profile.enabledStats).map(key => {
           const negative = STAT_DEFS[key].negative;
           return (
             <TouchableOpacity
@@ -155,7 +160,7 @@ export default function KidGame() {
               onPress={() => tap(key)}
               activeOpacity={0.6}
             >
-              <Text style={styles.tileCount}>{totals[key]}</Text>
+              <Text style={[styles.tileCount, { color: accent }]}>{totals[key]}</Text>
               <Text style={[styles.tileLabel, negative && styles.tileLabelNegative]}>
                 {STAT_DEFS[key].label}
               </Text>

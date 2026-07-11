@@ -5,15 +5,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useKidStats } from '../hooks/useKidStats';
-import { STAT_DEFS, StatKey, MAX_ENABLED_STATS, KidProfile, pointsFromTotals } from '../hooks/kidStats';
+import { STAT_DEFS, StatKey, MAX_ENABLED_STATS, STAT_ORDER, KidProfile, pointsFromTotals, KID_COLORS, DEFAULT_KID_COLOR, kidColor } from '../hooks/kidStats';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
 const ALL_ORIENTATIONS = ['portrait', 'portrait-upside-down', 'landscape-left', 'landscape-right'] as const;
-
-const STAT_ORDER: StatKey[] = [
-  'points2', 'points3', 'ftMade', 'rebound', 'steal', 'assist',
-  'foul', 'block', 'turnover', 'miss2', 'miss3', 'ftMiss',
-];
 
 export default function MyKid() {
   useAllOrientations();
@@ -24,6 +19,7 @@ export default function MyKid() {
   const [newName, setNewName] = useState('');
   const [newNumber, setNewNumber] = useState('');
   const [newTeam, setNewTeam] = useState('');
+  const [newColor, setNewColor] = useState(DEFAULT_KID_COLOR);
 
   const selected = profiles.find(p => p.id === selectedId) ?? null;
 
@@ -32,8 +28,8 @@ export default function MyKid() {
       Alert.alert('Name Required', "Enter your kid's name to create a profile.");
       return;
     }
-    const profile = addProfile(newName.trim(), newNumber.trim() || undefined, newTeam.trim() || undefined);
-    setNewName(''); setNewNumber(''); setNewTeam('');
+    const profile = addProfile(newName.trim(), newNumber.trim() || undefined, newTeam.trim() || undefined, newColor);
+    setNewName(''); setNewNumber(''); setNewTeam(''); setNewColor(DEFAULT_KID_COLOR);
     setShowAdd(false);
     setSelectedId(profile.id);
   };
@@ -114,8 +110,10 @@ export default function MyKid() {
               style={[styles.kidCard, selectedId === profile.id && styles.kidCardActive]}
               onPress={() => setSelectedId(selectedId === profile.id ? null : profile.id)}
             >
-              <View style={styles.kidBadge}>
-                <Text style={styles.kidBadgeText}>{profile.number ? `#${profile.number}` : profile.name.charAt(0).toUpperCase()}</Text>
+              <View style={[styles.kidBadge, { borderColor: kidColor(profile) }]}>
+                <Text style={[styles.kidBadgeText, { color: kidColor(profile) }]}>
+                  {profile.number ? `#${profile.number}` : profile.name.charAt(0).toUpperCase()}
+                </Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.kidName}>{profile.name}</Text>
@@ -138,6 +136,17 @@ export default function MyKid() {
                   >
                     <Text style={styles.seasonBtnText}>📈 SEASON</Text>
                   </TouchableOpacity>
+                </View>
+
+                <Text style={styles.sectionLabel}>COLOR</Text>
+                <View style={styles.colorRow}>
+                  {KID_COLORS.map(c => (
+                    <TouchableOpacity
+                      key={c}
+                      style={[styles.colorSwatch, { backgroundColor: c }, kidColor(profile) === c && styles.colorSwatchActive]}
+                      onPress={() => updateProfile(profile.id, { color: c })}
+                    />
+                  ))}
                 </View>
 
                 <Text style={styles.sectionLabel}>
@@ -221,6 +230,16 @@ export default function MyKid() {
                   />
                 </View>
               </View>
+              <Text style={[styles.inputLabel, { marginTop: 12 }]}>COLOR</Text>
+              <View style={styles.colorRow}>
+                {KID_COLORS.map(c => (
+                  <TouchableOpacity
+                    key={c}
+                    style={[styles.colorSwatch, { backgroundColor: c }, newColor === c && styles.colorSwatchActive]}
+                    onPress={() => setNewColor(c)}
+                  />
+                ))}
+              </View>
               <TouchableOpacity style={styles.createBtn} onPress={handleAdd}>
                 <Text style={styles.createBtnText}>CREATE PROFILE</Text>
               </TouchableOpacity>
@@ -292,6 +311,9 @@ const styles = StyleSheet.create({
   statChipOn: { borderColor: '#C8A040', backgroundColor: '#3D2800' },
   statChipText: { color: '#555', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
   statChipTextOn: { color: '#C8A040' },
+  colorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16, marginTop: 4 },
+  colorSwatch: { width: 30, height: 30, borderRadius: 15, borderWidth: 2, borderColor: 'transparent' },
+  colorSwatchActive: { borderColor: '#FFF', transform: [{ scale: 1.15 }] },
   deleteRow: { alignItems: 'center', marginTop: 16, paddingVertical: 8 },
   deleteRowText: { color: '#7A1A1A', fontSize: 11, fontWeight: '700', letterSpacing: 1 },
   overlay: { flex: 1, backgroundColor: '#000000BB', justifyContent: 'center', alignItems: 'center' },

@@ -5,7 +5,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useKidStats } from '../hooks/useKidStats';
 import {
-  STAT_DEFS, StatKey, GameEntry, pointsFromTotals, shootingLine,
+  STAT_DEFS, StatKey, GameEntry, pointsFromTotals, shootingLine, kidColor,
 } from '../hooks/kidStats';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
@@ -62,6 +62,7 @@ export default function KidSeason() {
 
   if (!profile) return <SafeAreaView style={styles.container} />;
 
+  const accent = kidColor(profile);
   const games = gamesForKid(profile.id); // date ascending
   const metrics = buildMetrics(games);
   const metric = metrics.find(m => m.key === metricKey) ?? metrics[0];
@@ -124,7 +125,7 @@ export default function KidSeason() {
           <View style={styles.summaryRow}>
             {summaryTiles.map(t => (
               <View key={t.label} style={styles.summaryTile}>
-                <Text style={styles.summaryValue}>{t.value}</Text>
+                <Text style={[styles.summaryValue, { color: accent }]}>{t.value}</Text>
                 <Text style={styles.summaryLabel}>{t.label}</Text>
               </View>
             ))}
@@ -151,7 +152,7 @@ export default function KidSeason() {
                 <View key={g.id} style={styles.chartCol}>
                   <Text style={styles.chartValue}>{metric.format(values[i])}</Text>
                   <View style={styles.chartBarTrack}>
-                    <View style={[styles.chartBar, { height: `${Math.max((values[i] / maxValue) * 100, 3)}%` }]} />
+                    <View style={[styles.chartBar, { backgroundColor: accent, height: `${Math.max((values[i] / maxValue) * 100, 3)}%` }]} />
                   </View>
                   <Text style={styles.chartDate}>{formatDate(g.date)}</Text>
                 </View>
@@ -178,7 +179,7 @@ export default function KidSeason() {
                 activeOpacity={0.8}
               >
                 <View style={styles.gamePts}>
-                  <Text style={styles.gamePtsText}>{pts}</Text>
+                  <Text style={[styles.gamePtsText, { color: accent }]}>{pts}</Text>
                   <Text style={styles.gamePtsLabel}>PTS</Text>
                 </View>
                 <View style={{ flex: 1 }}>

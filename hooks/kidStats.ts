@@ -53,13 +53,40 @@ export const DEFAULT_ENABLED_STATS: StatKey[] = [
 // Keep the tap grid fat-finger-proof.
 export const MAX_ENABLED_STATS = 10;
 
+// Canonical display order for the config chips and the tap grid.
+// The grid is two columns, so pairs (make | miss) land on the same row.
+export const STAT_ORDER: StatKey[] = [
+  'points2', 'miss2',
+  'points3', 'miss3',
+  'ftMade', 'ftMiss',
+  'rebound', 'steal',
+  'assist', 'block',
+  'turnover', 'foul',
+];
+
+export function sortByStatOrder(keys: StatKey[]): StatKey[] {
+  return [...keys].sort((a, b) => STAT_ORDER.indexOf(a) - STAT_ORDER.indexOf(b));
+}
+
 export interface KidProfile {
   id: string;
   name: string;
   number?: string;
   teamName?: string;
+  color?: string; // accent color across My Kid screens; defaults to ball orange
   enabledStats: StatKey[];
   createdAt: number;
+}
+
+export const DEFAULT_KID_COLOR = '#FF8A1F';
+
+export const KID_COLORS = [
+  '#FF8A1F', '#1E90FF', '#FF4500', '#32CD32',
+  '#FF1493', '#FFD700', '#9400D3', '#00CED1',
+];
+
+export function kidColor(profile: KidProfile): string {
+  return profile.color ?? DEFAULT_KID_COLOR;
 }
 
 // One tap during a game. The event log is the source of truth:
