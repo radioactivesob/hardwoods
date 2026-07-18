@@ -219,6 +219,9 @@ export default function MyKid() {
                   STATS TO TRACK ({profile.enabledStats.length}/{MAX_ENABLED_STATS})
                 </Text>
                 <Text style={styles.sectionHint}>These become the tap buttons during a game.</Text>
+                <TouchableOpacity onPress={() => router.push('/statsguide')}>
+                  <Text style={styles.guideLink}>ⓘ What do these stats mean?</Text>
+                </TouchableOpacity>
                 <View style={styles.statGrid}>
                   {STAT_ORDER.map(key => {
                     const on = profile.enabledStats.includes(key);
@@ -376,7 +379,8 @@ const styles = StyleSheet.create({
   },
   seasonBtnText: { color: '#C8A040', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
   sectionLabel: { color: '#8B6914', fontSize: 11, fontWeight: '700', letterSpacing: 2, marginBottom: 4 },
-  sectionHint: { color: '#555', fontSize: 10, fontStyle: 'italic', marginBottom: 10 },
+  sectionHint: { color: '#555', fontSize: 10, fontStyle: 'italic', marginBottom: 4 },
+  guideLink: { color: '#C8A040', fontSize: 11, fontWeight: '700', marginBottom: 10 },
   statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   statChip: {
     borderWidth: 1, borderColor: '#2A1A00', borderRadius: 6,
