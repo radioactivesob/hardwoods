@@ -13,7 +13,7 @@ import { useAllOrientations } from '../hooks/useScreenOrientation';
 
 // In-progress game survives app restarts — a parent at a real game
 // can't afford to lose 3 quarters of taps to a dead battery moment.
-const IN_PROGRESS_KEY = 'hardwoods_kidgame_inprogress';
+import { IN_PROGRESS_KEY } from '../hooks/useKidStats';
 
 interface InProgressGame {
   kidId: string;
@@ -140,6 +140,12 @@ export default function KidGame() {
             />
           </View>
         </View>
+        <TouchableOpacity
+          style={styles.pauseBtn}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.pauseBtnText}>⏸{'\n'}PAUSE</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.endBtn} onPress={endGame}>
           <Text style={styles.endBtnText}>END{'\n'}GAME</Text>
         </TouchableOpacity>
@@ -210,6 +216,11 @@ const styles = StyleSheet.create({
   oppInput: {
     color: '#C8A040', fontSize: 12, fontWeight: '600', padding: 0, flex: 1,
   },
+  pauseBtn: {
+    backgroundColor: '#0D0700', borderWidth: 1, borderColor: '#3D2800',
+    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
+  },
+  pauseBtnText: { color: '#8B6914', fontSize: 11, fontWeight: '900', letterSpacing: 1, textAlign: 'center', lineHeight: 15 },
   endBtn: {
     backgroundColor: '#3D2800', borderWidth: 1, borderColor: '#8B6914',
     borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8,

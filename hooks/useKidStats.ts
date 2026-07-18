@@ -12,6 +12,10 @@ import {
 
 const STORAGE_KEY = 'hardwoods_kids_v1';
 
+// The live game's crash-safe snapshot. Owned by kidgame.tsx; the
+// profiles screen reads it to show resume state.
+export const IN_PROGRESS_KEY = 'hardwoods_kidgame_inprogress';
+
 interface KidStore {
   profiles: KidProfile[];
   games: GameEntry[];

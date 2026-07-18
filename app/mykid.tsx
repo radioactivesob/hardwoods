@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView,
   TextInput, Alert, Modal, KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useKidStats } from '../hooks/useKidStats';
+import { useRouter, useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useKidStats, IN_PROGRESS_KEY } from '../hooks/useKidStats';
 import { STAT_DEFS, StatKey, MAX_ENABLED_STATS, STAT_ORDER, KidProfile, pointsFromTotals, KID_COLORS, DEFAULT_KID_COLOR, kidColor, profileSeason, gameSeason } from '../hooks/kidStats';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
@@ -14,6 +15,21 @@ export default function MyKid() {
   useAllOrientations();
   const router = useRouter();
   const { profiles, loading, addProfile, updateProfile, deleteProfile, gamesForKid, startNewSeason } = useKidStats();
+  // A paused game shows on its kid's card and turns START into RESUME.
+  // Re-read on every focus — this screen is where you land after pausing.
+  const [liveGame, setLiveGame] = useState<{ kidId: string; count: number } | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      AsyncStorage.getItem(IN_PROGRESS_KEY).then(raw => {
+        if (raw) {
+          const saved = JSON.parse(raw);
+          setLiveGame(saved.events?.length > 0 ? { kidId: saved.kidId, count: saved.events.length } : null);
+        } else {
+          setLiveGame(null);
+        }
+      });
+    }, []),
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState('');
@@ -64,6 +80,28 @@ export default function MyKid() {
   const startGame = (profile: KidProfile) => {
     if (profile.enabledStats.length === 0) {
       Alert.alert('No Stats Enabled', 'Turn on at least one stat to track before starting a game.');
+      return;
+    }
+    // Starting a different kid's game would overwrite a paused one —
+    // make that an explicit choice, never an accident.
+    if (liveGame && liveGame.kidId !== profile.id) {
+      const liveKid = profiles.find(p => p.id === liveGame.kidId);
+      Alert.alert(
+        'Game In Progress',
+        `${liveKid?.name ?? 'Another kid'} has a paused game with ${liveGame.count} stat${liveGame.count === 1 ? '' : 's'}. Starting a game for ${profile.name} will discard it.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Discard & Start',
+            style: 'destructive',
+            onPress: () => {
+              AsyncStorage.removeItem(IN_PROGRESS_KEY);
+              setLiveGame(null);
+              router.push({ pathname: '/kidgame', params: { kidId: profile.id } });
+            },
+          },
+        ],
+      );
       return;
     }
     router.push({ pathname: '/kidgame', params: { kidId: profile.id } });
@@ -135,7 +173,14 @@ export default function MyKid() {
                 </Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.kidName}>{profile.name}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={styles.kidName}>{profile.name}</Text>
+                  {liveGame?.kidId === profile.id && (
+                    <View style={styles.liveBadge}>
+                      <Text style={styles.liveBadgeText}>● GAME IN PROGRESS</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={styles.kidMeta}>
                   {profile.teamName ? `${profile.teamName} · ` : ''}{seasonSummary(profile)}
                 </Text>
@@ -147,7 +192,9 @@ export default function MyKid() {
               <View style={styles.detail}>
                 <View style={styles.actionRow}>
                   <TouchableOpacity style={[styles.startBtn, { flex: 2 }]} onPress={() => startGame(profile)}>
-                    <Text style={styles.startBtnText}>▶ START GAME</Text>
+                    <Text style={styles.startBtnText}>
+                      {liveGame?.kidId === profile.id ? '▶ RESUME GAME' : '▶ START GAME'}
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.seasonBtn}
@@ -308,6 +355,10 @@ const styles = StyleSheet.create({
   kidBadgeText: { color: '#C8A040', fontSize: 14, fontWeight: '900' },
   kidName: { color: '#FFF', fontSize: 16, fontWeight: '800', marginBottom: 2 },
   kidMeta: { color: '#666', fontSize: 11 },
+  liveBadge: {
+    backgroundColor: '#1E3B1E', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2,
+  },
+  liveBadgeText: { color: '#4CAF50', fontSize: 8, fontWeight: '800', letterSpacing: 0.5 },
   kidChevron: { color: '#8B6914', fontSize: 14 },
   detail: {
     backgroundColor: '#0D0700', borderRadius: 8, borderWidth: 1, borderColor: '#2A1A00',
