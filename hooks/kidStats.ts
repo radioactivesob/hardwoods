@@ -107,8 +107,17 @@ export interface GameEntry {
   date: number; // epoch ms, game day
   opponent?: string;
   season?: number; // absent = 1 (games saved before seasons existed)
+  teamScore?: { us: number; them: number }; // optional final team score for context
   events: StatEvent[];
   totals: Record<StatKey, number>; // derived from events at save time
+}
+
+// "W 30–28" / "L 28–35" / "T 20–20", or null when no score was entered.
+export function gameResult(game: GameEntry): string | null {
+  if (!game.teamScore) return null;
+  const { us, them } = game.teamScore;
+  const letter = us > them ? 'W' : us < them ? 'L' : 'T';
+  return `${letter} ${us}–${them}`;
 }
 
 export function gameSeason(game: GameEntry): number {

@@ -7,6 +7,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useKeepAwake } from 'expo-keep-awake';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useKidStats } from '../hooks/useKidStats';
+import ScorePrompt from '../components/ScorePrompt';
 import { STAT_DEFS, StatEvent, StatKey, totalsFromEvents, pointsFromTotals, sortByStatOrder, kidColor } from '../hooks/kidStats';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
@@ -35,6 +36,7 @@ export default function KidGame() {
   const [opponent, setOpponent] = useState('');
   const [startedAt, setStartedAt] = useState(Date.now());
   const [restored, setRestored] = useState(false);
+  const [showScorePrompt, setShowScorePrompt] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(IN_PROGRESS_KEY).then(raw => {
@@ -93,11 +95,9 @@ export default function KidGame() {
         { text: 'Keep Tracking', style: 'cancel' },
         {
           text: 'Save Game',
-          onPress: () => {
-            const game = saveGame(kidId!, events, { opponent, date: startedAt });
-            AsyncStorage.removeItem(IN_PROGRESS_KEY);
-            router.replace({ pathname: '/kidshare', params: { kidId: kidId!, gameId: game.id } });
-          },
+          // The final score is on the gym scoreboard right now — one
+          // optional prompt, then straight to the share card.
+          onPress: () => setShowScorePrompt(true),
         },
         {
           text: 'Discard',
@@ -178,6 +178,19 @@ export default function KidGame() {
           {lastEvent ? `⟵ UNDO ${STAT_DEFS[lastEvent.key].label}` : 'TAP A STAT TO START'}
         </Text>
       </TouchableOpacity>
+      <ScorePrompt
+        visible={showScorePrompt}
+        accent={accent}
+        skipLabel="SKIP — SAVE WITHOUT SCORE"
+        onSubmit={score => {
+          setShowScorePrompt(false);
+          const game = saveGame(kidId!, events, {
+            opponent, date: startedAt, teamScore: score ?? undefined,
+          });
+          AsyncStorage.removeItem(IN_PROGRESS_KEY);
+          router.replace({ pathname: '/kidshare', params: { kidId: kidId!, gameId: game.id } });
+        }}
+      />
     </SafeAreaView>
   );
 }

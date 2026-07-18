@@ -67,7 +67,7 @@ export function useKidStats() {
     }));
   }, [update]);
 
-  const saveGame = useCallback((kidId: string, events: StatEvent[], opts?: { opponent?: string; date?: number }) => {
+  const saveGame = useCallback((kidId: string, events: StatEvent[], opts?: { opponent?: string; date?: number; teamScore?: { us: number; them: number } }) => {
     const profile = store.profiles.find(p => p.id === kidId);
     const game: GameEntry = {
       id: Date.now().toString(),
@@ -75,12 +75,21 @@ export function useKidStats() {
       date: opts?.date ?? Date.now(),
       opponent: opts?.opponent?.trim() || undefined,
       season: profile ? profileSeason(profile) : 1,
+      teamScore: opts?.teamScore,
       events,
       totals: totalsFromEvents(events),
     };
     update(prev => ({ ...prev, games: [game, ...prev.games] }));
     return game;
   }, [update, store.profiles]);
+
+  // Backfill or correct a final team score on an already-saved game.
+  const setGameScore = useCallback((gameId: string, teamScore: { us: number; them: number }) => {
+    update(prev => ({
+      ...prev,
+      games: prev.games.map(g => (g.id === gameId ? { ...g, teamScore } : g)),
+    }));
+  }, [update]);
 
   const startNewSeason = useCallback((kidId: string) => {
     update(prev => ({
@@ -108,6 +117,7 @@ export function useKidStats() {
     updateProfile,
     deleteProfile,
     saveGame,
+    setGameScore,
     deleteGame,
     gamesForKid,
     startNewSeason,

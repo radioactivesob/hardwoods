@@ -8,8 +8,9 @@ import * as Sharing from 'expo-sharing';
 import { useKidStats } from '../hooks/useKidStats';
 import {
   STAT_DEFS, StatKey, GameEntry, pointsFromTotals, shootingLine, kidColor,
-  profileSeason, gameSeason,
+  profileSeason, gameSeason, gameResult,
 } from '../hooks/kidStats';
+import ScorePrompt from '../components/ScorePrompt';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
 type MetricKey = 'pts' | 'fgPct' | StatKey;
@@ -59,11 +60,12 @@ export default function KidSeason() {
   useAllOrientations();
   const router = useRouter();
   const { kidId } = useLocalSearchParams<{ kidId: string }>();
-  const { profiles, gamesForKid, deleteGame } = useKidStats();
+  const { profiles, gamesForKid, deleteGame, setGameScore } = useKidStats();
   const profile = profiles.find(p => p.id === kidId) ?? null;
   const [metricKey, setMetricKey] = useState<MetricKey>('pts');
   const [seasonPick, setSeasonPick] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [scoreTarget, setScoreTarget] = useState<GameEntry | null>(null);
 
   if (!profile) return <SafeAreaView style={styles.container} />;
 
@@ -93,14 +95,27 @@ export default function KidSeason() {
   );
   const seasonFgPct = agg.fgAttempted > 0 ? Math.round((agg.fgMade / agg.fgAttempted) * 100) : null;
 
-  const handleDeleteGame = (game: GameEntry) => {
+  const handleGameMenu = (game: GameEntry) => {
     const pts = pointsFromTotals(game.totals);
     Alert.alert(
-      'Delete Game?',
-      `${formatDate(game.date)}${game.opponent ? ` vs. ${game.opponent}` : ''} · ${pts} pts. This cannot be undone.`,
+      `${formatDate(game.date)}${game.opponent ? ` vs. ${game.opponent}` : ''}`,
+      `${pts} pts${gameResult(game) ? ` · ${gameResult(game)}` : ''}`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteGame(game.id) },
+        {
+          text: game.teamScore ? 'Edit Final Score' : 'Add Final Score',
+          onPress: () => setScoreTarget(game),
+        },
+        {
+          text: 'Delete Game',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert('Delete Game?', 'This cannot be undone.', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Delete', style: 'destructive', onPress: () => deleteGame(game.id) },
+            ]);
+          },
+        },
       ],
     );
   };
@@ -122,11 +137,12 @@ export default function KidSeason() {
 
       const gameRows = games.map(g => {
         const l = shootingLine(g.totals);
-        return `<tr><td>${formatDate(g.date)}</td><td>${g.opponent ?? '—'}</td><td><strong>${pointsFromTotals(g.totals)}</strong></td><td>${pct(l.fgMade, l.fgAttempted)}</td><td>${pct(l.ftMade, l.ftAttempted)}</td><td>${g.totals.rebound ?? 0}</td><td>${g.totals.steal ?? 0}</td><td>${g.totals.assist ?? 0}</td><td>${g.totals.foul ?? 0}</td></tr>`;
+        return `<tr><td>${formatDate(g.date)}</td><td>${g.opponent ?? '—'}</td><td>${gameResult(g) ?? '—'}</td><td><strong>${pointsFromTotals(g.totals)}</strong></td><td>${pct(l.fgMade, l.fgAttempted)}</td><td>${pct(l.ftMade, l.ftAttempted)}</td><td>${g.totals.rebound ?? 0}</td><td>${g.totals.steal ?? 0}</td><td>${g.totals.assist ?? 0}</td><td>${g.totals.foul ?? 0}</td></tr>`;
       }).join('');
 
       const summaryRows = [
         ['Games', `${games.length}`],
+        ...(record ? [['Team record (tracked games)', record] as [string, string]] : []),
         ['Total points', `${totalPoints}`],
         ['Points per game', (totalPoints / games.length).toFixed(1)],
         ['Field goals', pct(agg.fgMade, agg.fgAttempted)],
@@ -154,7 +170,7 @@ export default function KidSeason() {
         <h2>HIGHLIGHT</h2>
         <div class="hl">Best game: <strong>${bestPts} points</strong> on ${formatDate(best.date)}${best.opponent ? ` vs. ${best.opponent}` : ''}</div>
         <h2>GAME BY GAME</h2>
-        <table><tr><th>DATE</th><th>OPPONENT</th><th>PTS</th><th>FG</th><th>FT</th><th>REB</th><th>STL</th><th>AST</th><th>PF</th></tr>${gameRows}</table>
+        <table><tr><th>DATE</th><th>OPPONENT</th><th>RESULT</th><th>PTS</th><th>FG</th><th>FT</th><th>REB</th><th>STL</th><th>AST</th><th>PF</th></tr>${gameRows}</table>
         <div class="foot">tracked from the stands with Hardwoods</div>
       </body></html>`;
 
@@ -167,8 +183,14 @@ export default function KidSeason() {
     }
   };
 
+  const scored = games.filter(g => g.teamScore);
+  const record = scored.length
+    ? `${scored.filter(g => g.teamScore!.us > g.teamScore!.them).length}-${scored.filter(g => g.teamScore!.us < g.teamScore!.them).length}`
+    : null;
+
   const summaryTiles = [
     { label: 'GAMES', value: `${games.length}` },
+    ...(record ? [{ label: 'TEAM RECORD', value: record }] : []),
     { label: 'PTS/GAME', value: games.length ? (totalPoints / games.length).toFixed(1) : '—' },
     ...(seasonFgPct !== null ? [{ label: 'SEASON FG%', value: `${seasonFgPct}%` }] : []),
     ...(agg.rebounds > 0 ? [{ label: 'REBOUNDS', value: `${agg.rebounds}` }] : []),
@@ -280,7 +302,7 @@ export default function KidSeason() {
                 key={g.id}
                 style={styles.gameRow}
                 onPress={() => router.push({ pathname: '/kidshare', params: { kidId: profile.id, gameId: g.id } })}
-                onLongPress={() => handleDeleteGame(g)}
+                onLongPress={() => handleGameMenu(g)}
                 activeOpacity={0.8}
               >
                 <View style={styles.gamePts}>
@@ -290,13 +312,14 @@ export default function KidSeason() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.gameTitle}>
                     {formatDate(g.date)}{g.opponent ? ` · vs. ${g.opponent}` : ''}
+                    {gameResult(g) ? <Text style={{ color: (g.teamScore!.us >= g.teamScore!.them) ? '#4CAF50' : '#C25E5E' }}>  {gameResult(g)}</Text> : null}
                   </Text>
                   <Text style={styles.gameMeta}>{parts.join(' · ') || `${g.events.length} stats recorded`}</Text>
                 </View>
               </TouchableOpacity>
             );
           })}
-          <Text style={styles.deleteHint}>Tap a game to share it · long-press to delete.</Text>
+          <Text style={styles.deleteHint}>Tap a game to share it · long-press for score & delete.</Text>
 
           <TouchableOpacity
             style={[styles.reportBtn, exporting && { opacity: 0.5 }]}
@@ -311,6 +334,16 @@ export default function KidSeason() {
           <View style={{ height: 20 }} />
         </ScrollView>
       )}
+      <ScorePrompt
+        visible={!!scoreTarget}
+        accent={accent}
+        initial={scoreTarget?.teamScore}
+        onCancel={() => setScoreTarget(null)}
+        onSubmit={score => {
+          if (score && scoreTarget) setGameScore(scoreTarget.id, score);
+          setScoreTarget(null);
+        }}
+      />
     </SafeAreaView>
   );
 }

@@ -8,7 +8,7 @@ import * as Sharing from 'expo-sharing';
 import { useKidStats } from '../hooks/useKidStats';
 import {
   STAT_DEFS, GameEntry, pointsFromTotals, shootingLine, kidColor,
-  profileSeason, gameSeason,
+  profileSeason, gameSeason, gameResult,
 } from '../hooks/kidStats';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
@@ -48,7 +48,7 @@ export default function KidShare() {
   if (game) {
     const line = shootingLine(game.totals);
     headline = `${pointsFromTotals(game.totals)}`;
-    subtitle = `${formatDate(game.date)}${game.opponent ? `  ·  vs. ${game.opponent}` : ''}`;
+    subtitle = `${formatDate(game.date)}${game.opponent ? `  ·  vs. ${game.opponent}` : ''}${gameResult(game) ? `  ·  ${gameResult(game)}` : ''}`;
     rows = [
       { label: 'FIELD GOALS', value: shotLine(line.fgMade, line.fgAttempted) ?? '' },
       { label: '3-POINTERS', value: shotLine(line.threeMade, line.threeAttempted) ?? '' },
