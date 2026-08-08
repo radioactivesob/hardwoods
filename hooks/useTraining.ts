@@ -12,9 +12,14 @@ interface TrainingStore {
   sessions: Session[];
   /** Drills imported from a coach; built-ins live in code. */
   drills: Drill[];
+  /** Per-kid target overrides, keyed `kidId:drillId`. A drill's shipped
+   *  target suits some ages and not others, so each player gets their own. */
+  targets: Record<string, number>;
 }
 
-const EMPTY: TrainingStore = { sessions: [], drills: [] };
+const EMPTY: TrainingStore = { sessions: [], drills: [], targets: {} };
+
+const targetKey = (kidId: string, drillId: string) => `${kidId}:${drillId}`;
 
 export function useTraining() {
   const [store, setStore] = useState<TrainingStore>(EMPTY);
@@ -76,6 +81,28 @@ export function useTraining() {
     update(prev => ({ ...prev, drills: prev.drills.filter(d => d.id !== id) }));
   }, [update]);
 
+  /** The target this player is held to for this drill. */
+  const targetFor = useCallback(
+    (kidId: string, drill: Drill): number | undefined =>
+      store.targets[targetKey(kidId, drill.id)] ?? drill.target,
+    [store.targets],
+  );
+
+  const setTarget = useCallback((kidId: string, drillId: string, target: number | null) => {
+    update(prev => {
+      const next = { ...prev.targets };
+      // null clears the override, falling back to the drill's own target.
+      if (target == null) delete next[targetKey(kidId, drillId)];
+      else next[targetKey(kidId, drillId)] = target;
+      return { ...prev, targets: next };
+    });
+  }, [update]);
+
+  const hasTargetOverride = useCallback(
+    (kidId: string, drillId: string) => store.targets[targetKey(kidId, drillId)] != null,
+    [store.targets],
+  );
+
   const sessionsForKid = useCallback(
     (kidId: string) =>
       store.sessions.filter(s => s.kidId === kidId).sort((a, b) => a.date - b.date),
@@ -103,6 +130,9 @@ export function useTraining() {
     sessionsForKid,
     allDrills,
     findDrill,
+    targetFor,
+    setTarget,
+    hasTargetOverride,
     reload,
   };
 }

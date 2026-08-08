@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert,
+  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert, Modal,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,18 +20,21 @@ function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-/** "5 spots · 50 shots", or "1 spot · 25 shots". */
+/** "5 spots · 50 shots" — the target gets its own editable chip. */
 function drillSummary(d: Drill) {
   const spots = new Set(d.steps.map(s => s.spotId)).size;
   const shots = drillTotalAttempts(d);
-  return `${spots} spot${spots === 1 ? '' : 's'} · ${shots} shots${d.target ? ` · target ${Math.round(d.target * 100)}%` : ''}`;
+  return `${spots} spot${spots === 1 ? '' : 's'} · ${shots} shots`;
 }
+
+const ALL_ORIENTATIONS = ['portrait', 'portrait-upside-down', 'landscape-left', 'landscape-right'] as const;
 
 export default function Training() {
   useAllOrientations();
   const router = useRouter();
   const { profiles, loading: kidsLoading } = useKidStats();
-  const { allDrills, sessionsForKid, loading, reload } = useTraining();
+  const { allDrills, sessionsForKid, loading, reload, targetFor, setTarget, hasTargetOverride } = useTraining();
+  const [editing, setEditing] = useState<{ kid: KidProfile; drill: Drill; value: number } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [live, setLive] = useState<{ kidId: string; drillId?: string; shots: number } | null>(null);
 
@@ -190,7 +193,26 @@ export default function Training() {
                             </View>
                           )}
                         </View>
-                        <Text style={styles.drillMeta}>{drillSummary(d)}</Text>
+                        <View style={styles.metaRow}>
+                          <Text style={styles.drillMeta}>{drillSummary(d)}</Text>
+                          <TouchableOpacity
+                            style={[
+                              styles.targetChip,
+                              hasTargetOverride(profile.id, d.id) && { borderColor: accent },
+                            ]}
+                            onPress={() => setEditing({
+                              kid: profile, drill: d, value: targetFor(profile.id, d) ?? 0.5,
+                            })}
+                            hitSlop={8}
+                          >
+                            <Text style={[
+                              styles.targetChipText,
+                              hasTargetOverride(profile.id, d.id) && { color: accent },
+                            ]}>
+                              TARGET {Math.round((targetFor(profile.id, d) ?? 0.5) * 100)}% ✎
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
                         {d.description ? (
                           <Text style={styles.drillDesc} numberOfLines={2}>{d.description}</Text>
                         ) : null}
@@ -241,6 +263,69 @@ export default function Training() {
 
         <View style={{ height: 24 }} />
       </ScrollView>
+
+      <Modal
+        visible={!!editing}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditing(null)}
+        supportedOrientations={[...ALL_ORIENTATIONS]}
+      >
+        <View style={styles.overlay}>
+          {editing && (
+            <View style={styles.modal}>
+              <Text style={styles.modalTitle}>{editing.drill.name.toUpperCase()}</Text>
+              <Text style={styles.modalSub}>
+                Target for {editing.kid.name} — how much of the drill she needs to make.
+              </Text>
+
+              <View style={styles.stepper}>
+                <TouchableOpacity
+                  style={styles.stepBtn}
+                  onPress={() => setEditing(e => e && { ...e, value: Math.max(0.05, +(e.value - 0.05).toFixed(2)) })}
+                >
+                  <Text style={styles.stepBtnText}>−</Text>
+                </TouchableOpacity>
+                <Text style={[styles.stepValue, { color: kidColor(editing.kid) }]}>
+                  {Math.round(editing.value * 100)}%
+                </Text>
+                <TouchableOpacity
+                  style={styles.stepBtn}
+                  onPress={() => setEditing(e => e && { ...e, value: Math.min(1, +(e.value + 0.05).toFixed(2)) })}
+                >
+                  <Text style={styles.stepBtnText}>+</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.modalHint}>
+                Shipped default: {Math.round((editing.drill.target ?? 0.5) * 100)}%
+              </Text>
+
+              <TouchableOpacity
+                style={[styles.saveBtn, { backgroundColor: kidColor(editing.kid) }]}
+                onPress={() => {
+                  setTarget(editing.kid.id, editing.drill.id, editing.value);
+                  setEditing(null);
+                }}
+              >
+                <Text style={styles.saveBtnText}>SAVE TARGET</Text>
+              </TouchableOpacity>
+
+              {hasTargetOverride(editing.kid.id, editing.drill.id) && (
+                <TouchableOpacity
+                  style={styles.resetBtn}
+                  onPress={() => { setTarget(editing.kid.id, editing.drill.id, null); setEditing(null); }}
+                >
+                  <Text style={styles.resetText}>RESET TO DEFAULT</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.resetBtn} onPress={() => setEditing(null)}>
+                <Text style={styles.cancelText}>CANCEL</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -298,7 +383,33 @@ const styles = StyleSheet.create({
     padding: 12, marginBottom: 8,
   },
   drillName: { color: '#FFF', fontSize: 14, fontWeight: '700' },
-  drillMeta: { color: '#8B6914', fontSize: 11, marginTop: 3 },
+  drillMeta: { color: '#8B6914', fontSize: 11 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5, flexWrap: 'wrap' },
+  targetChip: {
+    borderWidth: 1, borderColor: '#3D2800', borderRadius: 4,
+    paddingHorizontal: 6, paddingVertical: 2,
+  },
+  targetChipText: { color: '#8B6914', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+  overlay: { flex: 1, backgroundColor: '#000000BB', justifyContent: 'center', alignItems: 'center' },
+  modal: {
+    backgroundColor: '#1A0F00', borderRadius: 12, borderWidth: 1, borderColor: '#8B6914',
+    width: 300, padding: 20, alignItems: 'center',
+  },
+  modalTitle: { color: '#FFF', fontSize: 14, fontWeight: '900', letterSpacing: 1.5, textAlign: 'center' },
+  modalSub: { color: '#8B6914', fontSize: 11, textAlign: 'center', marginTop: 8, lineHeight: 16 },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: 20, marginTop: 18 },
+  stepBtn: {
+    width: 52, height: 52, borderRadius: 10, backgroundColor: '#0D0700',
+    borderWidth: 1, borderColor: '#8B6914', justifyContent: 'center', alignItems: 'center',
+  },
+  stepBtnText: { color: '#C8A040', fontSize: 26, fontWeight: '900' },
+  stepValue: { fontSize: 34, fontWeight: '900', minWidth: 88, textAlign: 'center' },
+  modalHint: { color: '#5A4210', fontSize: 10, marginTop: 12 },
+  saveBtn: { borderRadius: 8, paddingVertical: 12, alignSelf: 'stretch', alignItems: 'center', marginTop: 18 },
+  saveBtnText: { color: '#1A0F00', fontSize: 13, fontWeight: '900', letterSpacing: 1 },
+  resetBtn: { paddingVertical: 10 },
+  resetText: { color: '#8B6914', fontSize: 11, fontWeight: '700', letterSpacing: 1 },
+  cancelText: { color: '#555', fontSize: 11, fontWeight: '700', letterSpacing: 1 },
   drillDesc: { color: '#5A4210', fontSize: 11, marginTop: 4, fontStyle: 'italic' },
   drillChevron: { color: '#8B6914', fontSize: 20, fontWeight: '300' },
   posTag: {

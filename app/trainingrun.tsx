@@ -29,7 +29,7 @@ export default function TrainingRun() {
   const { width } = useWindowDimensions();
   const { kidId, drillId } = useLocalSearchParams<{ kidId: string; drillId?: string }>();
   const { profiles } = useKidStats();
-  const { findDrill, saveSession } = useTraining();
+  const { findDrill, saveSession, targetFor } = useTraining();
 
   const profile = profiles.find(p => p.id === kidId) ?? null;
   const drill = findDrill(drillId);
@@ -112,7 +112,9 @@ export default function TrainingRun() {
             const s = saveSession(kidId!, shots, {
               drillId: drill?.id,
               drillName: drill?.name,
-              target: drill?.target,
+              // Snapshot the player's target so past sessions keep the bar
+              // they were actually judged against.
+              target: drill ? targetFor(kidId!, drill) : undefined,
               completed: progress?.complete ?? false,
               date: startedAt,
             });
