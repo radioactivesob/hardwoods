@@ -1,5 +1,5 @@
 import React from 'react';
-import Svg, { Rect, Circle, Path, Line, G } from 'react-native-svg';
+import Svg, { Rect, Circle, Path, Line, G, Text as SvgText } from 'react-native-svg';
 import {
   COURT_WIDTH_FT, COURT_DEPTH_FT, HOOP_X, HOOP_Y,
   LANE_HALF_FT, FT_LINE_FT, THREE_PT_FT, Spot, Shot,
@@ -20,6 +20,12 @@ const HOOP = '#8B6914';
  */
 export const DEFAULT_VISIBLE_DEPTH_FT = 32;
 
+export interface SpotMarker {
+  spot: Spot;
+  made: number;
+  attempted: number;
+}
+
 export interface CourtProps {
   width: number;
   visibleDepthFt?: number;
@@ -29,8 +35,12 @@ export interface CourtProps {
   activeSpotId?: string;
   /** Spots already finished, drawn filled. */
   completedSpotIds?: string[];
-  /** Shots to plot: made filled, missed hollow. */
+  /** Shots to plot: made filled, missed hollow. Use for free shooting,
+   *  where every tap has a genuinely distinct position. */
   shots?: Shot[];
+  /** Per-spot summary. Use for drills — every rep at a spot shares one
+   *  coordinate, so individual dots would stack into a single mark. */
+  spotMarkers?: SpotMarker[];
   accent?: string;
   missColor?: string;
   onPressPoint?: (x: number, y: number) => void;
@@ -43,6 +53,7 @@ export default function Court({
   activeSpotId,
   completedSpotIds = [],
   shots = [],
+  spotMarkers = [],
   accent = '#FF8A1F',
   missColor = '#C25E5E',
   onPressPoint,
@@ -131,7 +142,7 @@ export default function Court({
         })}
       </G>
 
-      {/* plotted shots */}
+      {/* plotted shots (free shooting) */}
       <G>
         {shots.map((s, i) => (
           <Circle
@@ -142,6 +153,34 @@ export default function Court({
             strokeWidth={2}
           />
         ))}
+      </G>
+
+      {/* per-spot summary (drills): fill density carries the percentage */}
+      <G>
+        {spotMarkers.map(m => {
+          const pct = m.attempted > 0 ? m.made / m.attempted : 0;
+          const r = Math.max(15, width * 0.05);
+          const cx = px(m.spot.x);
+          const cy = py(m.spot.y);
+          const cold = m.attempted > 0 && pct < 0.34;
+          return (
+            <G key={m.spot.id}>
+              <Circle
+                cx={cx} cy={cy} r={r}
+                fill={m.attempted === 0 ? 'none' : cold ? missColor : accent}
+                fillOpacity={m.attempted === 0 ? 0 : 0.18 + pct * 0.62}
+                stroke={m.attempted === 0 ? LINE : cold ? missColor : accent}
+                strokeWidth={2}
+              />
+              <SvgText
+                x={cx} y={cy + r * 0.3} fontSize={r * 0.66} fontWeight="bold"
+                fill="#FFFFFF" textAnchor="middle"
+              >
+                {m.attempted === 0 ? '–' : `${Math.round(pct * 100)}`}
+              </SvgText>
+            </G>
+          );
+        })}
       </G>
     </Svg>
   );
