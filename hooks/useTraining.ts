@@ -20,12 +20,16 @@ export function useTraining() {
   const [store, setStore] = useState<TrainingStore>(EMPTY);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then(raw => {
-      if (raw) setStore({ ...EMPTY, ...JSON.parse(raw) });
-      setLoading(false);
-    });
+  // Each screen holds its own copy of the store, so a screen that stays
+  // mounted while another one writes goes stale. Screens showing lists
+  // call reload() on focus.
+  const reload = useCallback(async () => {
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    setStore(raw ? { ...EMPTY, ...JSON.parse(raw) } : EMPTY);
+    setLoading(false);
   }, []);
+
+  useEffect(() => { reload(); }, [reload]);
 
   const update = useCallback((fn: (prev: TrainingStore) => TrainingStore) => {
     setStore(prev => {
@@ -99,5 +103,6 @@ export function useTraining() {
     sessionsForKid,
     allDrills,
     findDrill,
+    reload,
   };
 }

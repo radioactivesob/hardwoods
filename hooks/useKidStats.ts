@@ -27,12 +27,16 @@ export function useKidStats() {
   const [store, setStore] = useState<KidStore>(EMPTY_STORE);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then(raw => {
-      if (raw) setStore(JSON.parse(raw));
-      setLoading(false);
-    });
+  // Each screen holds its own copy of the store, so a screen that stays
+  // mounted while another one writes goes stale. Screens showing lists
+  // call reload() on focus.
+  const reload = useCallback(async () => {
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    setStore(raw ? JSON.parse(raw) : EMPTY_STORE);
+    setLoading(false);
   }, []);
+
+  useEffect(() => { reload(); }, [reload]);
 
   const update = useCallback((fn: (prev: KidStore) => KidStore) => {
     setStore(prev => {
@@ -125,5 +129,6 @@ export function useKidStats() {
     deleteGame,
     gamesForKid,
     startNewSeason,
+    reload,
   };
 }

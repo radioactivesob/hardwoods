@@ -14,12 +14,15 @@ const ALL_ORIENTATIONS = ['portrait', 'portrait-upside-down', 'landscape-left', 
 export default function MyKid() {
   useAllOrientations();
   const router = useRouter();
-  const { profiles, loading, addProfile, updateProfile, deleteProfile, gamesForKid, startNewSeason } = useKidStats();
+  const { profiles, loading, addProfile, updateProfile, deleteProfile, gamesForKid, startNewSeason, reload } = useKidStats();
   // A paused game shows on its kid's card and turns START into RESUME.
   // Re-read on every focus — this screen is where you land after pausing.
   const [liveGame, setLiveGame] = useState<{ kidId: string; count: number } | null>(null);
   useFocusEffect(
     useCallback(() => {
+      // Games saved elsewhere land in storage while this screen is still
+      // mounted underneath, so re-read rather than trusting mount-time state.
+      reload();
       AsyncStorage.getItem(IN_PROGRESS_KEY).then(raw => {
         if (raw) {
           const saved = JSON.parse(raw);
@@ -28,7 +31,7 @@ export default function MyKid() {
           setLiveGame(null);
         }
       });
-    }, []),
+    }, [reload]),
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);

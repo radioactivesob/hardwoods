@@ -31,7 +31,7 @@ export default function Training() {
   useAllOrientations();
   const router = useRouter();
   const { profiles, loading: kidsLoading } = useKidStats();
-  const { allDrills, sessionsForKid, loading } = useTraining();
+  const { allDrills, sessionsForKid, loading, reload } = useTraining();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [live, setLive] = useState<{ kidId: string; drillId?: string; shots: number } | null>(null);
 
@@ -40,15 +40,17 @@ export default function Training() {
     if (!selectedId && profiles.length === 1) setSelectedId(profiles[0].id);
   }, [profiles.length]);
 
-  // A paused session shows on its kid's card as "resume".
+  // Re-read on focus: sessions saved by the runner land in storage while
+  // this screen is still mounted underneath it.
   useFocusEffect(
     useCallback(() => {
+      reload();
       AsyncStorage.getItem(TRAINING_IN_PROGRESS_KEY).then(raw => {
         if (!raw) return setLive(null);
         const s = JSON.parse(raw);
         setLive(s?.shots?.length > 0 ? { kidId: s.kidId, drillId: s.drillId, shots: s.shots.length } : null);
       });
-    }, []),
+    }, [reload]),
   );
 
   const drills = allDrills();
