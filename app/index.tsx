@@ -46,6 +46,17 @@ export default function Home() {
           <Text style={styles.cardChevron}>›</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.card} onPress={() => router.push('/training')} activeOpacity={0.8}>
+          <Text style={styles.cardIcon}>🎯</Text>
+          <View style={styles.cardBody}>
+            <Text style={styles.cardTitle}>TRAINING</Text>
+            <Text style={styles.cardDesc}>
+              Run shooting drills, chart every shot, and watch the percentages climb.
+            </Text>
+          </View>
+          <Text style={styles.cardChevron}>›</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.card} onPress={() => router.push('/teamseasons')} activeOpacity={0.8}>
           <Text style={styles.cardIcon}>📈</Text>
           <View style={styles.cardBody}>
