@@ -201,7 +201,14 @@ export default function Training() {
 
                   {recent.length > 0 && (
                     <>
-                      <Text style={styles.sectionLabel}>RECENT SESSIONS</Text>
+                      <View style={styles.sectionRow}>
+                        <Text style={styles.sectionLabel}>RECENT SESSIONS</Text>
+                        <TouchableOpacity
+                          onPress={() => router.push({ pathname: '/traininghistory', params: { kidId: profile.id } })}
+                        >
+                          <Text style={[styles.seeAll, { color: accent }]}>HISTORY ›</Text>
+                        </TouchableOpacity>
+                      </View>
                       {recent.map(s => {
                         const l = sessionLine(s.shots);
                         return (
@@ -283,6 +290,8 @@ const styles = StyleSheet.create({
   sectionLabel: {
     color: '#8B6914', fontSize: 11, fontWeight: '700', letterSpacing: 2, marginBottom: 8, marginTop: 4,
   },
+  sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  seeAll: { fontSize: 11, fontWeight: '800', letterSpacing: 1, marginBottom: 8, marginTop: 4 },
   drillRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: '#1A0F00', borderRadius: 8, borderWidth: 1, borderColor: '#2A1A00',
