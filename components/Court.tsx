@@ -13,8 +13,16 @@ const LINE = '#5A4210';
 const FLOOR = '#140A01';
 const HOOP = '#8B6914';
 
+/**
+ * How much of the floor to show, in feet from the baseline. Everything a
+ * shooter uses lives inside ~26ft (the arc tops out at 25), so drawing the
+ * full 47ft half court wastes half the frame and shrinks the targets.
+ */
+export const DEFAULT_VISIBLE_DEPTH_FT = 32;
+
 export interface CourtProps {
   width: number;
+  visibleDepthFt?: number;
   /** Spots to draw as targets — drill steps, typically. */
   spots?: Spot[];
   /** Index into `spots` that is currently active (pulsing ring). */
@@ -30,6 +38,7 @@ export interface CourtProps {
 
 export default function Court({
   width,
+  visibleDepthFt = DEFAULT_VISIBLE_DEPTH_FT,
   spots = [],
   activeSpotId,
   completedSpotIds = [],
@@ -38,22 +47,29 @@ export default function Court({
   missColor = '#C25E5E',
   onPressPoint,
 }: CourtProps) {
-  // Court is 50ft x 47ft; keep that ratio so distances read true.
-  const height = width * (COURT_DEPTH_FT / COURT_WIDTH_FT);
+  // Full width (50ft), cropped depth. Feet map to the same pixels on both
+  // axes, so the arc stays circular and distances read true.
+  const height = width * (visibleDepthFt / COURT_WIDTH_FT);
+
+  // Court space puts y=0 at the baseline; the screen puts y=0 at the top.
+  // Flip on the way out so the basket sits at the bottom, the way you'd
+  // stand behind the baseline looking in.
   const px = (nx: number) => nx * width;
-  const py = (ny: number) => ny * height;
-  const ftX = (f: number) => px(f / COURT_WIDTH_FT);
-  const ftY = (f: number) => py(f / COURT_DEPTH_FT);
+  const lenX = (f: number) => (f / COURT_WIDTH_FT) * width;
+  const lenY = (f: number) => (f / visibleDepthFt) * height;
+  const posY = (f: number) => height - lenY(f);
+  const py = (ny: number) => posY(ny * COURT_DEPTH_FT);
 
   const hoopX = px(HOOP_X);
   const hoopY = py(HOOP_Y);
-  const laneHalf = ftX(LANE_HALF_FT);
-  const ftLineY = ftY(FT_LINE_FT);
-  const ftCircleR = ftX(6);
+  const laneHalf = lenX(LANE_HALF_FT);
+  const ftLineY = posY(FT_LINE_FT);
+  const ftCircleR = lenX(6);
 
   // Three-point arc, swept between the points where it meets the baseline.
-  const r3x = ftX(THREE_PT_FT);
-  const r3y = ftY(THREE_PT_FT);
+  // sweep=1 bulges it up the floor, away from the hoop.
+  const r3x = lenX(THREE_PT_FT);
+  const r3y = lenY(THREE_PT_FT);
   const arc = `M ${hoopX - r3x} ${hoopY} A ${r3x} ${r3y} 0 0 1 ${hoopX + r3x} ${hoopY}`;
 
   const dotR = Math.max(4, width * 0.018);
@@ -63,7 +79,8 @@ export default function Court({
     ? (e: any) => {
         const { locationX, locationY } = e.nativeEvent;
         const nx = Math.min(Math.max(locationX / width, 0), 1);
-        const ny = Math.min(Math.max(locationY / height, 0), 1);
+        const fy = (1 - locationY / height) * visibleDepthFt;
+        const ny = Math.min(Math.max(fy / COURT_DEPTH_FT, 0), 1);
         onPressPoint(nx, ny);
       }
     : undefined;
@@ -84,7 +101,7 @@ export default function Court({
 
       {/* backboard and rim */}
       <Line
-        x1={hoopX - ftX(3)} y1={ftY(4)} x2={hoopX + ftX(3)} y2={ftY(4)}
+        x1={hoopX - lenX(3)} y1={posY(4)} x2={hoopX + lenX(3)} y2={posY(4)}
         stroke={HOOP} strokeWidth={2.5}
       />
       <Circle cx={hoopX} cy={hoopY} r={Math.max(3, width * 0.014)} fill="none" stroke={HOOP} strokeWidth={2} />
