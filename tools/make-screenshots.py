@@ -125,18 +125,22 @@ IPAD_FRAMES = [
 ]
 
 FRAMES = [
+    ("Chart every shot",      "Shooting drills with a tap-to-record court",
+     ["11-trainingresult.png"],                              "01-training.png"),
     ("Watch them improve",    "Game-by-game trends, all season long",
-     ["07-kidseason.png"],                                   "01-season.png"),
+     ["07-kidseason.png"],                                   "02-season.png"),
     ("Run the official book", "Rosters, fouls, periods, box scores",
-     ["02-scoreboard.png", "03-scoring.png", "04-scorebook.png"], "02-book.png"),
+     ["02-scoreboard.png", "03-scoring.png", "04-scorebook.png"], "03-book.png"),
     ("Track your kid",        "From the stands, one tap at a time",
-     ["06-kidgame.png"],                                     "03-track.png"),
+     ["06-kidgame.png"],                                     "04-track.png"),
     ("Send it to the family", "Stat cards you can text in a tap",
-     ["08-sharecard.png"],                                   "04-share.png"),
+     ["08-sharecard.png"],                                   "05-share.png"),
     ("Just need the score?",  "Two teams, no roster, no setup",
-     ["10-simplegame.png"],                                  "05-simple.png"),
-    ("Four ways to score",    "Pick the one that fits your night",
-     ["01-landing.png"],                                     "06-modes.png"),
+     ["10-simplegame.png"],                                  "06-simple.png"),
+    ("Five ways to use it",   "Pick the one that fits your night",
+     ["01-landing.png"],                                     "07-modes.png"),
+    ("Practice adds up",      "Every session, every zone, all season",
+     ["12-traininghistory.png"],                             "08-history.png"),
 ]
 
 print("iPhone frames:")
