@@ -72,23 +72,27 @@ export interface Spot {
 
 const ft = (fx: number, fy: number) => ({ x: fx / COURT_WIDTH_FT, y: fy / COURT_DEPTH_FT });
 
+// Left and right are the SHOOTER's, not the viewer's. She stands on the
+// floor facing the basket; the court is drawn with the basket at the
+// bottom, so she faces down the page and her left is the viewer's right.
+// That's why every "left" spot sits at x > 25ft.
 export const SPOTS: Record<string, Spot> = {
   layup:        { id: 'layup',        label: 'Layup',          ...ft(25, 8),     zoneId: 'paint' },
-  leftBlock:    { id: 'leftBlock',    label: 'Left block',     ...ft(19.5, 8),   zoneId: 'paint' },
-  rightBlock:   { id: 'rightBlock',   label: 'Right block',    ...ft(30.5, 8),   zoneId: 'paint' },
+  leftBlock:    { id: 'leftBlock',    label: 'Left block',     ...ft(30.5, 8),   zoneId: 'paint' },
+  rightBlock:   { id: 'rightBlock',   label: 'Right block',    ...ft(19.5, 8),   zoneId: 'paint' },
   freeThrow:    { id: 'freeThrow',    label: 'Free throw',     ...ft(25, 19),    zoneId: 'freeThrow' },
-  leftElbow:    { id: 'leftElbow',    label: 'Left elbow',     ...ft(19, 19),    zoneId: 'leftElbow' },
-  rightElbow:   { id: 'rightElbow',   label: 'Right elbow',    ...ft(31, 19),    zoneId: 'rightElbow' },
-  leftBaseline: { id: 'leftBaseline', label: 'Left baseline',  ...ft(13, 7),     zoneId: 'leftBaseline' },
-  rightBaseline:{ id: 'rightBaseline',label: 'Right baseline', ...ft(37, 7),     zoneId: 'rightBaseline' },
-  leftWing:     { id: 'leftWing',     label: 'Left wing',      ...ft(14.4, 15.9),zoneId: 'leftWing' },
-  rightWing:    { id: 'rightWing',    label: 'Right wing',     ...ft(35.6, 15.9),zoneId: 'rightWing' },
+  leftElbow:    { id: 'leftElbow',    label: 'Left elbow',     ...ft(31, 19),    zoneId: 'leftElbow' },
+  rightElbow:   { id: 'rightElbow',   label: 'Right elbow',    ...ft(19, 19),    zoneId: 'rightElbow' },
+  leftBaseline: { id: 'leftBaseline', label: 'Left baseline',  ...ft(37, 7),     zoneId: 'leftBaseline' },
+  rightBaseline:{ id: 'rightBaseline',label: 'Right baseline', ...ft(13, 7),     zoneId: 'rightBaseline' },
+  leftWing:     { id: 'leftWing',     label: 'Left wing',      ...ft(35.6, 15.9),zoneId: 'leftWing' },
+  rightWing:    { id: 'rightWing',    label: 'Right wing',     ...ft(14.4, 15.9),zoneId: 'rightWing' },
   // Corner spots sit a little beyond the arc — at exactly 19.75 ft they
   // land on the line and read as mid-range.
-  leftCorner3:  { id: 'leftCorner3',  label: 'Left corner 3',  ...ft(4.5, 6.5),  zoneId: 'leftCorner3' },
-  rightCorner3: { id: 'rightCorner3', label: 'Right corner 3', ...ft(45.5, 6.5), zoneId: 'rightCorner3' },
-  leftWing3:    { id: 'leftWing3',    label: 'Left wing 3',    ...ft(10.9, 19.4),zoneId: 'leftWing3' },
-  rightWing3:   { id: 'rightWing3',   label: 'Right wing 3',   ...ft(39.1, 19.4),zoneId: 'rightWing3' },
+  leftCorner3:  { id: 'leftCorner3',  label: 'Left corner 3',  ...ft(45.5, 6.5), zoneId: 'leftCorner3' },
+  rightCorner3: { id: 'rightCorner3', label: 'Right corner 3', ...ft(4.5, 6.5),  zoneId: 'rightCorner3' },
+  leftWing3:    { id: 'leftWing3',    label: 'Left wing 3',    ...ft(39.1, 19.4),zoneId: 'leftWing3' },
+  rightWing3:   { id: 'rightWing3',   label: 'Right wing 3',   ...ft(10.9, 19.4),zoneId: 'rightWing3' },
   top3:         { id: 'top3',         label: 'Top of the key', ...ft(25, 25.25), zoneId: 'top3' },
 };
 
@@ -107,7 +111,9 @@ export function distanceFt(x: number, y: number): number {
 export function classifyZone(x: number, y: number): ZoneId {
   const dx = (x - HOOP_X) * COURT_WIDTH_FT;
   const dy = (y - HOOP_Y) * COURT_DEPTH_FT;
-  const left = dx < 0;
+  // Shooter's left is the viewer's right — she faces the basket, which the
+  // court draws at the bottom.
+  const left = dx > 0;
   const dist = Math.hypot(dx, dy);
   // 0° = along the baseline, 90° = straight out from the hoop
   const angle = (Math.atan2(Math.max(dy, 0), Math.abs(dx)) * 180) / Math.PI;
@@ -157,34 +163,44 @@ const drill = (
   steps: steps.map(([spotId, attempts]) => ({ spotId, attempts })),
 });
 
+/** Alternating reps, e.g. the Mikan drill's left-right-left rhythm. */
+function alternate(a: string, b: string, rounds: number): [string, number][] {
+  return Array.from({ length: rounds * 2 }, (_, i) => [i % 2 === 0 ? a : b, 1]);
+}
+
+// Descriptions are instructions, not labels — a parent who has never run a
+// shooting drill should be able to follow them cold.
 export const BUILT_IN_DRILLS: Drill[] = [
   drill('form-shooting', 'Form Shooting', 'any',
     [['layup', 10], ['leftBlock', 10], ['rightBlock', 10]], 0.8,
-    'Close to the rim. Groove the mechanics before stepping out.'),
+    'Stand a step from the rim. Shoot with one hand, elbow under the ball, and hold the follow-through until it drops. Straight on first, then each block.'),
+  drill('mikan', 'Mikan Drill', 'any',
+    alternate('leftBlock', 'rightBlock', 10), 0.75,
+    'Alternate layups on each side of the rim without letting the ball hit the floor. Shoot with the outside hand, catch your own rebound, step across, and go straight back up.'),
   drill('free-throw-ladder', 'Free Throw Ladder', 'any',
     [['freeThrow', 25]], 0.7,
-    'Twenty-five from the line. The most repeatable shot in the game.'),
+    'Twenty-five from the line. Same routine before every shot — that repetition is the whole point.'),
   drill('mid-range-circuit', 'Mid-Range Circuit', 'any',
     [['leftBaseline', 10], ['leftWing', 10], ['freeThrow', 10],
      ['rightWing', 10], ['rightBaseline', 10]], 0.5,
-    'Five spots inside the arc, ten shots each.'),
+    'Five spots inside the arc, ten shots each, working around from her left. She should be set and balanced before each shot.'),
   drill('elbow-to-elbow', 'Elbow to Elbow', 'any',
     [['leftElbow', 15], ['rightElbow', 15]], 0.5,
-    'Fifteen from each elbow. Catch, square up, shoot.'),
+    'Fifteen from each elbow — the corners of the free-throw line. Catch, square her shoulders to the rim, shoot.'),
   drill('around-the-world-3', 'Around the World (3PT)', 'guard',
     [['leftCorner3', 5], ['leftWing3', 5], ['top3', 5],
      ['rightWing3', 5], ['rightCorner3', 5]], 0.35,
-    'Five spots behind the arc, five shots each.'),
+    'Five spots behind the arc, five shots each, moving corner to corner. Feet set behind the line before the catch.'),
   drill('corner-threes', 'Corner Threes', 'wing',
     [['leftCorner3', 15], ['rightCorner3', 15]], 0.35,
-    'The shortest three on the floor, from both corners.'),
+    'The shortest three on the floor. Watch her feet — the corner is where players step on the line without noticing.'),
   drill('post-finishing', 'Post Finishing', 'post',
     [['leftBlock', 10], ['rightBlock', 10], ['layup', 10]], 0.65,
-    'Finish over both shoulders, then straight through the middle.'),
+    'From the blocks beside the rim. Finish over her outside shoulder on each side, then straight through the middle.'),
   drill('game-shots', 'Game Shots', 'any',
     [['layup', 5], ['freeThrow', 5], ['leftWing', 5],
      ['rightWing', 5], ['top3', 5]], 0.5,
-    'A mixed bag — the shots that actually come up in a game.'),
+    'A mixed bag at game speed — the shots that actually come up. Move between spots instead of standing and repeating.'),
 ];
 
 export function drillTotalAttempts(d: Drill): number {

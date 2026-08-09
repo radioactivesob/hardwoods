@@ -147,12 +147,19 @@ export default function TrainingRun() {
 
   const accent = kidColor(profile);
   const courtWidth = Math.min(width - 32, 420);
+  // Alternating drills (Mikan) revisit the same spots, so draw each spot
+  // once, and only call it done when no later step comes back to it.
   const drillSpots = drill
-    ? drill.steps.map(s => SPOTS[s.spotId]).filter(Boolean)
+    ? Array.from(new Set(drill.steps.map(s => s.spotId)))
+        .map(id => SPOTS[id])
+        .filter(Boolean)
     : [];
-  const completedSpotIds = drill
-    ? drill.steps.slice(0, progress?.stepIndex ?? 0).map(s => s.spotId)
-    : [];
+  const stillToCome = new Set(
+    drill ? drill.steps.slice(progress?.stepIndex ?? 0).map(s => s.spotId) : [],
+  );
+  const completedSpotIds = drillSpots
+    .filter(s => !stillToCome.has(s.id))
+    .map(s => s.id);
   const canRecord = drill ? !!activeSpot : !!pending;
 
   return (
@@ -194,7 +201,11 @@ export default function TrainingRun() {
       {drill && progress && !progress.complete && (
         <View style={styles.progressWrap}>
           <Text style={styles.progressText}>
-            {progress.takenAtStep} OF {progress.attemptsAtStep} SHOTS
+            {/* Single-rep steps (alternating drills) already say which rep
+                they're on in the heading — show the whole drill instead. */}
+            {progress.attemptsAtStep > 1
+              ? `${progress.takenAtStep} OF ${progress.attemptsAtStep} SHOTS`
+              : `${progress.totalTaken} OF ${progress.totalAttempts} SHOTS`}
           </Text>
           <View style={styles.progressTrack}>
             <View
@@ -205,6 +216,14 @@ export default function TrainingRun() {
           </View>
         </View>
       )}
+
+      {/* A parent who has never run this drill needs to know what it is. */}
+      {drill?.description ? (
+        <View style={styles.howToWrap}>
+          <Text style={styles.howToLabel}>HOW IT WORKS</Text>
+          <Text style={styles.howToText}>{drill.description}</Text>
+        </View>
+      ) : null}
 
       {/* Push the tap targets into the thumb zone — you hit these without
           looking while she's shooting. */}
@@ -272,6 +291,12 @@ const styles = StyleSheet.create({
   progressText: { color: '#8B6914', fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 6 },
   progressTrack: { height: 7, borderRadius: 3.5, backgroundColor: '#2A1A00' },
   progressFill: { height: 7, borderRadius: 3.5, backgroundColor: '#FFC93C' },
+  howToWrap: {
+    marginHorizontal: 16, marginTop: 14, padding: 12,
+    backgroundColor: '#0D0700', borderRadius: 8, borderWidth: 1, borderColor: '#2A1A00',
+  },
+  howToLabel: { color: '#8B6914', fontSize: 9, fontWeight: '800', letterSpacing: 1.5, marginBottom: 5 },
+  howToText: { color: '#9A8355', fontSize: 12, lineHeight: 17 },
   buttonRow: { flexDirection: 'row', gap: 12, padding: 16, paddingTop: 18 },
   makeBtn: {
     flex: 1, minHeight: 84, borderRadius: 12, backgroundColor: '#3D2800',
