@@ -116,7 +116,7 @@ IPAD_SRC = os.path.join(SRC, "ipad")
 IPAD_FRAMES = [
     ("Watch them improve",    "Game-by-game trends, all season long",
      ["02-kidseason.png"],   "01-season.png"),
-    ("Four ways to score",    "Pick the one that fits your night",
+    ("Five ways to use it",   "Pick the one that fits your night",
      ["01-landing.png"],     "02-modes.png"),
     ("See how you stack up",  "Every archived game, by team",
      ["03-teamseasons.png"], "03-teams.png"),
