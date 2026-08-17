@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, TextInput, Alert,
+  View, StyleSheet, TouchableOpacity, SafeAreaView, Alert,
 } from 'react-native';
+import { Text, TextInput } from '../components/AppText';
 import { useRouter } from 'expo-router';
 import { useKeepAwake } from 'expo-keep-awake';
 import { captureRef } from 'react-native-view-shot';

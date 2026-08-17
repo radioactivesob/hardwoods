@@ -1,7 +1,8 @@
 import React from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView,
+  View, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView,
 } from 'react-native';
+import { Text } from '../components/AppText';
 import { useRouter } from 'expo-router';
 import { STAT_DEFS, STAT_ORDER } from '../hooks/kidStats';
 import { useAllOrientations } from '../hooks/useScreenOrientation';

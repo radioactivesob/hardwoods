@@ -1,8 +1,8 @@
 import React, { useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView,
-  Alert, useWindowDimensions,
+  View, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert, useWindowDimensions,
 } from 'react-native';
+import { Text } from '../components/AppText';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';

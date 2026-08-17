@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView,
+  View, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView,
 } from 'react-native';
+import { Text } from '../components/AppText';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useKidStats } from '../hooks/useKidStats';
 import { useTraining } from '../hooks/useTraining';

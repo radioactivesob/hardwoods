@@ -1,7 +1,8 @@
 import React from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, Alert,
+  View, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, Alert,
 } from 'react-native';
+import { Text } from '../components/AppText';
 import { useRouter } from 'expo-router';
 import { useGame } from '../context/GameContext';
 import { useTeamGames, archivedGameFromState } from '../hooks/useTeamGames';

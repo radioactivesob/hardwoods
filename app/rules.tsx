@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, TextInput, Alert,
-  KeyboardAvoidingView, Platform,
+  View, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { Text, TextInput } from '../components/AppText';
 import { useRouter } from 'expo-router';
 import { useGame, RulesConfig, SavedPreset } from '../context/GameContext';
 import { useAllOrientations } from '../hooks/useScreenOrientation';

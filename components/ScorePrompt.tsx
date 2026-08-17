@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, TextInput, Modal,
+  View, StyleSheet, TouchableOpacity, Modal,
 } from 'react-native';
+import { Text, TextInput } from './AppText';
 
 const ALL_ORIENTATIONS = ['portrait', 'portrait-upside-down', 'landscape-left', 'landscape-right'] as const;
 

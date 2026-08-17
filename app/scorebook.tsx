@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert, Modal,
+  View, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert, Modal,
 } from 'react-native';
+import { Text } from '../components/AppText';
+import { HEADER_FONT_SCALE } from '../components/AppText';
 import { useRouter } from 'expo-router';
 import { captureRef } from 'react-native-view-shot';
 import { useGame, Player, PlayerStats } from '../context/GameContext';
@@ -214,15 +216,15 @@ export default function Scorebook() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>← BACK</Text>
+          <Text style={styles.backText} maxFontSizeMultiplier={HEADER_FONT_SCALE}>← BACK</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>SCOREBOOK</Text>
+        <Text style={styles.title} maxFontSizeMultiplier={HEADER_FONT_SCALE} numberOfLines={1}>SCOREBOOK</Text>
         <View style={styles.headerButtons}>
           <TouchableOpacity
             style={[styles.editBtn, editMode && styles.editBtnActive]}
             onPress={() => setEditMode(e => !e)}
           >
-            <Text style={[styles.editBtnText, editMode && styles.editBtnTextActive]}>
+            <Text style={[styles.editBtnText, editMode && styles.editBtnTextActive]} maxFontSizeMultiplier={HEADER_FONT_SCALE}>
               {editMode ? '✎ EDITING' : '✎ EDIT'}
             </Text>
           </TouchableOpacity>
@@ -231,14 +233,14 @@ export default function Scorebook() {
             onPress={shareImage}
             disabled={sharingImg}
           >
-            <Text style={styles.exportBtnText}>{sharingImg ? '...' : '📤 IMG'}</Text>
+            <Text style={styles.exportBtnText} maxFontSizeMultiplier={HEADER_FONT_SCALE}>{sharingImg ? '...' : '📤 IMG'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.exportBtn, exporting && styles.exportBtnDisabled]}
             onPress={exportPDF}
             disabled={exporting}
           >
-            <Text style={styles.exportBtnText}>{exporting ? '...' : '↓ PDF'}</Text>
+            <Text style={styles.exportBtnText} maxFontSizeMultiplier={HEADER_FONT_SCALE}>{exporting ? '...' : '↓ PDF'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -352,6 +354,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: '#0D0700', paddingHorizontal: 16, paddingVertical: 10,
     borderBottomWidth: 2, borderBottomColor: '#8B6914',
+    // Wraps to a second line rather than shoving buttons off screen at
+    // large accessibility text sizes.
+    flexWrap: 'wrap', rowGap: 8, columnGap: 12,
   },
   backText: { color: '#8B6914', fontSize: 13, fontWeight: '700' },
   title: { color: '#FFF', fontSize: 16, fontWeight: '900', letterSpacing: 2 },

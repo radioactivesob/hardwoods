@@ -1,5 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import {
+  View, StyleSheet, TouchableOpacity, SafeAreaView,
+} from 'react-native';
+import { Text } from '../components/AppText';
 import { useRouter } from 'expo-router';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
@@ -10,7 +13,11 @@ export default function Home() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.brand}>HARDWOODS</Text>
+        {/* The wordmark shrinks rather than wrapping mid-word at large
+            accessibility text sizes. */}
+        <Text style={styles.brand} numberOfLines={1} adjustsFontSizeToFit>
+          HARDWOODS
+        </Text>
         <Text style={styles.tagline}>Youth basketball, in the book.</Text>
 
         <TouchableOpacity style={styles.card} onPress={() => router.push('/scoreboard')} activeOpacity={0.8}>

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert,
+  View, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert,
 } from 'react-native';
+import { Text } from '../components/AppText';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useGame, Player } from '../context/GameContext';
 import { useLandscapeOnly } from '../hooks/useScreenOrientation';

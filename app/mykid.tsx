@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView,
-  TextInput, Alert, Modal, KeyboardAvoidingView, Platform,
+  View, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert, Modal, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { Text, TextInput } from '../components/AppText';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useKidStats, IN_PROGRESS_KEY } from '../hooks/useKidStats';
