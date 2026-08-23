@@ -182,6 +182,17 @@ the status bar. Sources live in `appstore/`, output in `appstore/marketing/`.
   the wild carries the regression.
 - **Coach export** (session/season data as PDF or CSV for a coach) — designed,
   deliberately deferred. Should reuse the `kidTransfer` machinery.
+- **Shot sheets** — coaches hand out paper sheets ("400 Shots Sheet": 21 ordered
+  drill entries, done over weeks, completed twice). Designed 2026-08-23, not
+  built. The crux is that such a sheet counts **makes**, not attempts: `Drill`
+  steps are `attempts: N` with `target` as a percentage, while the sheet means
+  "shoot until 25 fall". Needs `goal: {type, value}` on a step, an assignment
+  object containing ordered entries, and progress that accumulates across
+  sessions instead of one sitting. Build the parent side first — entering a sheet
+  by hand and tracking against it is the whole benefit and needs no coach. A
+  coach-facing builder plus the return trip is an optional layer; `drill.v1` is
+  already shareable (it has a `source` field), but collecting a squad's files
+  back with no cloud and no roster view is where this fights the constraints.
 - **AirDrop import can only be tested on real devices.** The document-type
   declarations in `app.json` (`UTExportedTypeDeclarations` /
   `CFBundleDocumentTypes` / `LSSupportsOpeningDocumentsInPlace`) can't be
