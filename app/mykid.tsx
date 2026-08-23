@@ -398,13 +398,16 @@ const styles = StyleSheet.create({
   },
   actionRow: { flexDirection: 'row', gap: 8, marginBottom: 16, alignItems: 'stretch' },
   startBtn: {
+    // Horizontal padding matters here: adjustsFontSizeToFit only shrinks text
+    // as far as it must, so without it the label runs to the button's edges.
     backgroundColor: '#8B6914', borderRadius: 8, paddingVertical: 14,
-    alignItems: 'center',
+    paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center',
   },
   startBtnText: { color: '#FFF', fontSize: 15, fontWeight: '900', letterSpacing: 2 },
   seasonBtn: {
     flex: 1, backgroundColor: '#0D0700', borderWidth: 1, borderColor: '#8B6914',
-    borderRadius: 8, paddingVertical: 14, alignItems: 'center',
+    borderRadius: 8, paddingVertical: 14, paddingHorizontal: 10,
+    alignItems: 'center', justifyContent: 'center',
   },
   seasonBtnText: { color: '#C8A040', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
   sectionLabel: { color: '#8B6914', fontSize: 11, fontWeight: '700', letterSpacing: 2, marginBottom: 4 },
