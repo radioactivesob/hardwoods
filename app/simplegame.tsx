@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View, StyleSheet, TouchableOpacity, SafeAreaView, Alert,
+  View, StyleSheet, TouchableOpacity, SafeAreaView, Alert, useWindowDimensions,
 } from 'react-native';
 import { Text, TextInput } from '../components/AppText';
 import { useRouter } from 'expo-router';
@@ -55,6 +55,11 @@ export default function SimpleGame() {
   useLandscapeOnly();
   useKeepAwake();
   const router = useRouter();
+  // Landscape is the layout this screen was designed for, but nothing forces
+  // the phone to turn, so portrait gets its own stacked arrangement rather
+  // than a squeezed version of the wide one.
+  const { width, height } = useWindowDimensions();
+  const portrait = height >= width;
   const screenRef = useRef<View>(null);
   const [game, setGame] = useState<SimpleGame>(FRESH);
   const [restored, setRestored] = useState(false);
@@ -145,18 +150,38 @@ export default function SimpleGame() {
   const teamPanel = (team: TeamId) => {
     const name = team === 'A' ? game.nameA : game.nameB;
     const color = TEAM_COLORS[team];
+    const nameField = (
+      <TextInput
+        style={[styles.teamName, portrait && styles.teamNamePortrait, { color }]}
+        value={name}
+        onChangeText={v => update(prev => (team === 'A' ? { ...prev, nameA: v } : { ...prev, nameB: v }))}
+        maxLength={14}
+      />
+    );
+    const meta = (
+      <Text style={styles.meta}>
+        FOULS ({periodName(game.period)}): {periodFouls(team)}   ·   T.O. USED: {timeoutsUsed(team)}
+      </Text>
+    );
     return (
       <View style={[styles.panel, { borderColor: color }]}>
-        <TextInput
-          style={[styles.teamName, { color }]}
-          value={name}
-          onChangeText={v => update(prev => (team === 'A' ? { ...prev, nameA: v } : { ...prev, nameB: v }))}
-          maxLength={14}
-        />
-        <Text style={[styles.score, { color }]}>{score(team)}</Text>
-        <Text style={styles.meta}>
-          FOULS ({periodName(game.period)}): {periodFouls(team)}   ·   T.O. USED: {timeoutsUsed(team)}
-        </Text>
+        {portrait ? (
+          // Half a portrait screen is short and wide, so the name and score sit
+          // side by side and leave the height to the buttons.
+          <View style={styles.portraitHead}>
+            <View style={styles.portraitHeadText}>
+              {nameField}
+              {meta}
+            </View>
+            <Text style={[styles.score, styles.scorePortrait, { color }]}>{score(team)}</Text>
+          </View>
+        ) : (
+          <>
+            {nameField}
+            <Text style={[styles.score, { color }]}>{score(team)}</Text>
+            {meta}
+          </>
+        )}
         <View style={styles.btnGrid}>
           {(Object.keys(EVENT_LABEL) as EventKind[]).map(kind => (
             <TouchableOpacity
@@ -182,6 +207,29 @@ export default function SimpleGame() {
   return (
     <SafeAreaView style={styles.container}>
       <View ref={screenRef} collapsable={false} style={styles.captureArea}>
+        {portrait ? (
+          <>
+            <View style={styles.topBar}>
+              <Text style={styles.brand}>HARDWOODS</Text>
+              <View style={styles.topPeriod}>
+                <Text style={styles.periodLabel}>PERIOD</Text>
+                <Text style={styles.periodValueSm}>{periodName(game.period)}</Text>
+              </View>
+              {game.period < MAX_PERIODS ? (
+                <TouchableOpacity style={styles.periodBtn} onPress={advancePeriod}>
+                  <Text style={styles.periodBtnText}>{periodName(game.period + 1)} →</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={{ width: 64 }} />
+              )}
+            </View>
+
+            <View style={styles.mainPortrait}>
+              {teamPanel('A')}
+              {teamPanel('B')}
+            </View>
+          </>
+        ) : (
         <View style={styles.main}>
           {teamPanel('A')}
 
@@ -208,6 +256,7 @@ export default function SimpleGame() {
 
           {teamPanel('B')}
         </View>
+        )}
 
         <TouchableOpacity
           style={styles.undoBar}
@@ -220,6 +269,26 @@ export default function SimpleGame() {
               : 'TAP AN EVENT TO START'}
           </Text>
         </TouchableOpacity>
+
+        {portrait && (
+          <View style={styles.bottomBar}>
+            <TouchableOpacity style={styles.bottomBtn} onPress={endGame}>
+              <Text style={styles.centerBtnText} numberOfLines={1} adjustsFontSizeToFit>■ END GAME</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.bottomBtn} onPress={newGame}>
+              <Text
+                style={[styles.centerBtnText, { color: '#FF6B6B' }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+                ↺ NEW
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.bottomBtn} onPress={() => router.back()}>
+              <Text style={styles.centerBtnText} numberOfLines={1} adjustsFontSizeToFit>⌂ HOME</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -229,6 +298,25 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1A0F00' },
   captureArea: { flex: 1, backgroundColor: '#1A0F00' },
   main: { flex: 1, flexDirection: 'row', padding: 10, gap: 10 },
+  mainPortrait: { flex: 1, flexDirection: 'column', padding: 10, gap: 10 },
+  topBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#0D0700', borderBottomWidth: 1, borderBottomColor: '#3D2800',
+    paddingHorizontal: 14, paddingVertical: 8,
+  },
+  topPeriod: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  periodValueSm: { color: '#C8A040', fontSize: 20, fontWeight: '900' },
+  portraitHead: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    width: '100%', marginBottom: 6,
+  },
+  portraitHeadText: { flex: 1, alignItems: 'flex-start' },
+  scorePortrait: { fontSize: 44, lineHeight: 48 },
+  bottomBar: {
+    flexDirection: 'row', backgroundColor: '#0D0700',
+    borderTopWidth: 1, borderTopColor: '#3D2800',
+  },
+  bottomBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
   panel: {
     flex: 1, borderWidth: 2, borderRadius: 14, backgroundColor: '#0D0700',
     alignItems: 'center', paddingVertical: 10, paddingHorizontal: 12,
@@ -237,6 +325,7 @@ const styles = StyleSheet.create({
     fontSize: 16, fontWeight: '900', letterSpacing: 2, textAlign: 'center',
     padding: 0, minWidth: 120,
   },
+  teamNamePortrait: { textAlign: 'left', minWidth: 0 },
   score: { fontSize: 56, fontWeight: '900', lineHeight: 60 },
   meta: { color: '#8B6914', fontSize: 10, fontWeight: '700', letterSpacing: 0.5, marginBottom: 8 },
   btnGrid: {

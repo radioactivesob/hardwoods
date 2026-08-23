@@ -6,6 +6,8 @@ import { Text } from '../components/AppText';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
+import { File, Paths } from 'expo-file-system';
+import { buildTransfer, suggestFileName } from '../hooks/kidTransfer';
 import { useKidStats } from '../hooks/useKidStats';
 import {
   STAT_DEFS, GameEntry, pointsFromTotals, shootingLine, kidColor,
@@ -29,6 +31,7 @@ export default function KidShare() {
   const { profiles, gamesForKid } = useKidStats();
   const cardRef = useRef<View>(null);
   const [sharing, setSharing] = useState(false);
+  const [sendingFile, setSendingFile] = useState(false);
 
   const profile = profiles.find(p => p.id === kidId) ?? null;
   if (!profile) return <SafeAreaView style={styles.container} />;
@@ -83,6 +86,33 @@ export default function KidShare() {
       { label: 'ASSISTS', value: agg.assists ? `${agg.assists}` : '' },
     ].filter(r => r.value !== '');
   }
+
+  // The image is for people; this is for another copy of Hardwoods. It sends
+  // exactly what the card shows — this game, or this season's games.
+  const shareData = async () => {
+    const picked = game ? [game] : games;
+    if (picked.length === 0) return;
+    try {
+      setSendingFile(true);
+      const payload = buildTransfer(profile, picked);
+      const file = new File(Paths.cache, suggestFileName(payload.player, picked.length));
+      file.create({ overwrite: true });
+      file.write(JSON.stringify(payload));
+      if (!(await Sharing.isAvailableAsync())) {
+        Alert.alert('Sharing Unavailable', 'This device cannot open the share sheet.');
+        return;
+      }
+      await Sharing.shareAsync(file.uri, {
+        mimeType: 'application/octet-stream',
+        dialogTitle: `${profile.name} — ${picked.length} game${picked.length === 1 ? '' : 's'}`,
+        UTI: 'com.hardwoods.gamefile',
+      });
+    } catch {
+      Alert.alert('Share Failed', 'Could not create the file. Try again.');
+    } finally {
+      setSendingFile(false);
+    }
+  };
 
   const share = async () => {
     try {
@@ -142,7 +172,21 @@ export default function KidShare() {
         >
           <Text style={styles.shareBtnText}>{sharing ? 'PREPARING…' : '📤 SHARE AS IMAGE'}</Text>
         </TouchableOpacity>
-        <Text style={styles.shareHint}>Opens the share sheet — text it, post it, save it.</Text>
+        <Text style={styles.shareHint}>A picture of the card — text it, post it, save it.</Text>
+
+        <TouchableOpacity
+          style={[styles.dataBtn, sendingFile && { opacity: 0.6 }]}
+          onPress={sendingFile ? undefined : shareData}
+        >
+          <Text style={styles.dataBtnText}>
+            {sendingFile ? 'PREPARING…' : 'SHARE STATS'}
+          </Text>
+        </TouchableOpacity>
+        <Text style={styles.shareHint}>
+          {seasonMode
+            ? `Sends all ${games.length} game${games.length === 1 ? '' : 's'} as data another phone can add to ${profile.name}'s profile.`
+            : `Sends this game as data another phone can add to ${profile.name}'s profile.`}
+        </Text>
 
         <View style={{ height: 24 }} />
       </ScrollView>
@@ -192,5 +236,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   shareBtnText: { color: '#FFF', fontSize: 14, fontWeight: '900', letterSpacing: 1.5 },
-  shareHint: { color: '#555', fontSize: 11, marginTop: 8 },
+  shareHint: {
+    color: '#555', fontSize: 11, marginTop: 8, textAlign: 'center', maxWidth: 300,
+  },
+  dataBtn: {
+    borderRadius: 10, paddingVertical: 14, paddingHorizontal: 40, marginTop: 18,
+    alignItems: 'center', borderWidth: 1.5, borderColor: '#8B6914',
+  },
+  dataBtnText: { color: '#C8A040', fontSize: 14, fontWeight: '900', letterSpacing: 1.5 },
 });
