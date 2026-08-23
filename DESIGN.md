@@ -192,22 +192,39 @@ the status bar. Sources live in `appstore/`, output in `appstore/marketing/`.
   copy-in behaviour of `NO` is both accurate and avoids needing security-scoped
   URL handling. Declaring `CFBundleDocumentTypes` without this key is a delivery
   warning and leaves the behaviour undefined.
+- **`scoring.tsx` has no portrait layout.** Deliberately deferred (agreed
+  2026-08-23). Full Scorebook's stat-entry screen splits 50/50 vertically in
+  portrait: roster crammed into the left half above dead space, TEAM T/O and
+  TECHNICAL stretched into full-height slabs on the right. The intended fix is
+  the same shape `simplegame.tsx` now uses — roster across the top, the selected
+  player's stat buttons across the bottom, picked off `useWindowDimensions`. It's
+  the screen used during a live game, so it wants its own build. The Full
+  Scorebook *hub* is fine in portrait and should be left alone; its admin bar is
+  not — seven buttons plus the period button shrink to near-unreadable, and wants
+  two rows.
 - **`useScreenOrientation` hooks are no-ops.** Orientation is handled by the
   Info.plist declarations plus per-screen layout. Fine in practice; means an
   iPad can show a landscape-designed screen in portrait.
-- **Simulator MCP is blocked** by `xcode-select` pointing away from Xcode. Fixing
-  it needs the user's password (`sudo xcode-select -s
-  /Applications/Xcode.app/Contents/Developer`). Without it, screens can be
-  screenshotted via `xcrun simctl` but **not tapped** — anything requiring
-  interaction has to be verified by the user, or by seeding AsyncStorage
-  directly and deep-linking to the screen.
+- **The share sheet doesn't present in the simulator.** `Sharing.shareAsync`
+  silently does nothing there, on both the image and file paths, so anything
+  ending in a share sheet can only be confirmed on a real device.
 
 ---
 
-## Verifying without taps
+## Verifying on the simulator
 
-Since the simulator can't be driven, the working pattern is: seed state into
-AsyncStorage, then deep-link straight to the screen.
+The simulator can be driven — taps and screenshots both work. Build and install
+locally with:
+
+```bash
+LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 npx expo run:ios
+```
+
+The locale vars are not optional: Ruby 4.x's `unicode_normalize` rejects the
+ASCII-8BIT path string CocoaPods passes it, and `pod install` dies before it
+starts without them.
+
+To reach a screen directly, seed state into AsyncStorage and deep-link to it.
 
 ```bash
 D="iPhone 17 Pro Max"
