@@ -150,28 +150,28 @@ export default function Scoreboard() {
       {/* Admin Bar */}
       <View style={styles.adminBar}>
         <TouchableOpacity style={styles.adminButton} onPress={() => router.push('/rules')}>
-          <Text style={styles.adminButtonText}>⚙ RULES</Text>
+          <Text style={styles.adminButtonText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>⚙ RULES</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.adminButton} onPress={() => router.push('/teams')}>
-          <Text style={styles.adminButtonText}>👥 TEAMS</Text>
+          <Text style={styles.adminButtonText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>👥 TEAMS</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.adminButton} onPress={() => router.push('/scorebook')}>
-          <Text style={styles.adminButtonText}>📋 SCOREBOOK</Text>
+          <Text style={styles.adminButtonText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>SCOREBOOK</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.adminButton} onPress={() => router.replace('/')}>
-          <Text style={styles.adminButtonText}>⌂ HOME</Text>
+          <Text style={styles.adminButtonText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>⌂ HOME</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.adminButton, !canUndo && styles.adminButtonDisabled]}
           onPress={canUndo ? undo : undefined}
         >
-          <Text style={[styles.adminButtonText, { color: canUndo ? '#C8A040' : '#444' }]}>⟵ UNDO</Text>
+          <Text style={[styles.adminButtonText, { color: canUndo ? '#C8A040' : '#444' }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>⟵ UNDO</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.adminButton} onPress={confirmEndGame}>
-          <Text style={[styles.adminButtonText, { color: '#C8A040' }]}>■ END GAME</Text>
+          <Text style={[styles.adminButtonText, { color: '#C8A040' }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>■ END GAME</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.adminButton, styles.adminButtonDanger]} onPress={confirmNewGame}>
-          <Text style={[styles.adminButtonText, { color: '#FF6B6B' }]}>↺ NEW GAME</Text>
+          <Text style={[styles.adminButtonText, { color: '#FF6B6B' }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>↺ NEW GAME</Text>
         </TouchableOpacity>
 
         <View style={styles.periodButtons}>
