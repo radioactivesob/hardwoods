@@ -345,7 +345,7 @@ export function parseDrill(raw: unknown, source?: string): DrillParse {
   const d = raw as Partial<Drill>;
   if (!d || typeof d !== 'object') return { ok: false, error: 'That file is not a drill.' };
   if (d.format !== DRILL_FORMAT) {
-    return { ok: false, error: 'Unrecognised drill format — it may be from a newer version of Hardwoods.' };
+    return { ok: false, error: 'Unrecognized drill format — it may be from a newer version of Hardwoods.' };
   }
   if (typeof d.name !== 'string' || !d.name.trim()) {
     return { ok: false, error: 'That drill has no name.' };

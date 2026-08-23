@@ -1,0 +1,36 @@
+Send games between phones
+
+If someone else was sitting with your kid's game — a spouse, a grandparent, the
+other parent at an away tournament — they can now send those games straight to
+your copy of Hardwoods. Pick the games, share them by AirDrop, text, or email,
+and they land in your kid's profile with her number, color, and stat set intact.
+Sharing the same games twice won't create duplicates.
+
+Add a game by hand
+
+Missed one, or tracked it on paper? Enter it yourself: date, opponent, an
+optional final score, and whichever stats you follow. Hand-entered games show up
+everywhere tracked ones do.
+
+Share the numbers, not just a picture
+
+The share card can now send the stats themselves, so another phone can add them
+to your kid's profile — right alongside the image you'd text to family.
+
+Large text is properly supported
+
+If you use bigger text on your iPhone, screens no longer break. Labels and
+buttons scale to fit instead of overlapping or running off the edge.
+
+Simple Scorebook works upright
+
+No need to rotate the phone. Held upright, you get one team across the top and
+one across the bottom. Turn it sideways and the wide layout is still there.
+
+Faster, and lighter on memory
+
+Hardwoods is built on the newest React Native, which clears up a memory problem
+that could slow things down over a long game or practice.
+
+As always: no accounts, no ads, no tracking. Nothing leaves your phone unless you
+choose to send it.

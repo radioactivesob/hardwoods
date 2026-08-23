@@ -82,7 +82,7 @@ export default function KidExport() {
       <View style={styles.intro}>
         <Text style={styles.introText}>
           Pick the games to send. The file also carries {profile.name}'s number,
-          colour, and which stats you track — so whoever opens it records the
+          color, and which stats you track — so whoever opens it records the
           same things you do.
         </Text>
       </View>

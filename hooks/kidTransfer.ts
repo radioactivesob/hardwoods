@@ -109,7 +109,7 @@ export function parseTransfer(raw: unknown): TransferParse {
   const f = raw as Partial<TransferFile>;
   if (!f || typeof f !== 'object') return { ok: false, error: 'That file is not a Hardwoods export.' };
   if (f.format !== TRANSFER_FORMAT) {
-    return { ok: false, error: 'Unrecognised file format — it may be from a newer version of Hardwoods.' };
+    return { ok: false, error: 'Unrecognized file format — it may be from a newer version of Hardwoods.' };
   }
   const p = f.player as Partial<TransferPlayer> | undefined;
   if (!p || typeof p.name !== 'string' || !p.name.trim()) {
