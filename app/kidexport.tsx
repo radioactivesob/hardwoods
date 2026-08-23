@@ -46,8 +46,8 @@ export default function KidExport() {
       const payload = buildTransfer(profile, picked);
       const name = suggestFileName(payload.player, picked.length);
       const file = new File(Paths.cache, name);
-      if (file.exists) file.delete();
-      file.create();
+      // Same filename twice in a day is normal — overwrite rather than fail.
+      file.create({ overwrite: true });
       file.write(JSON.stringify(payload));
 
       if (!(await Sharing.isAvailableAsync())) {
