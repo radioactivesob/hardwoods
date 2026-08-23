@@ -54,10 +54,13 @@ export default function KidExport() {
         Alert.alert('Sharing Unavailable', 'This device cannot open the share sheet.');
         return;
       }
+      // Advertise our own type, not JSON — saying public.json here is what
+      // made the share sheet hand the file to Quick Look's text preview
+      // instead of offering Hardwoods.
       await Sharing.shareAsync(file.uri, {
-        mimeType: 'application/json',
+        mimeType: 'application/octet-stream',
         dialogTitle: `${profile.name} — ${picked.length} game${picked.length === 1 ? '' : 's'}`,
-        UTI: 'public.json',
+        UTI: 'com.hardwoods.gamefile',
       });
     } catch {
       Alert.alert('Export Failed', 'Could not create the file. Try again.');
