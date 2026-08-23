@@ -5,7 +5,9 @@ import {
 import { Text, TextInput } from '../components/AppText';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { File } from 'expo-file-system';
 import { useKidStats, IN_PROGRESS_KEY } from '../hooks/useKidStats';
+import { parseTransfer, planMerge, matchProfile, toGameEntry } from '../hooks/kidTransfer';
 import { STAT_DEFS, StatKey, MAX_ENABLED_STATS, STAT_ORDER, KidProfile, pointsFromTotals, KID_COLORS, DEFAULT_KID_COLOR, kidColor, profileSeason, gameSeason } from '../hooks/kidStats';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
@@ -14,7 +16,7 @@ const ALL_ORIENTATIONS = ['portrait', 'portrait-upside-down', 'landscape-left', 
 export default function MyKid() {
   useAllOrientations();
   const router = useRouter();
-  const { profiles, loading, addProfile, updateProfile, deleteProfile, gamesForKid, startNewSeason, reload } = useKidStats();
+  const { profiles, loading, addProfile, updateProfile, deleteProfile, gamesForKid, startNewSeason, importGames, importProfile, reload } = useKidStats();
   // A paused game shows on its kid's card and turns START into RESUME.
   // Re-read on every focus — this screen is where you land after pausing.
   const [liveGame, setLiveGame] = useState<{ kidId: string; count: number } | null>(null);
@@ -120,6 +122,91 @@ export default function MyKid() {
     return `${prefix}${games.length} game${games.length === 1 ? '' : 's'} · ${ppg} pts/game`;
   };
 
+  /**
+   * Merge games another parent tracked and sent over. The file names the
+   * player, so this figures out which profile it belongs to rather than
+   * asking, and reports exactly what it will and won't add.
+   */
+  const importFromFile = async () => {
+    let json: unknown;
+    try {
+      const picked = await File.pickFileAsync({ mimeTypes: ['application/json'] });
+      if (picked.canceled || !picked.result) return;
+      json = JSON.parse(await picked.result.text());
+    } catch {
+      Alert.alert('Could Not Read File', "That file couldn't be opened, or isn't Hardwoods data.");
+      return;
+    }
+
+    const parsed = parseTransfer(json);
+    if (!parsed.ok) {
+      Alert.alert('Could Not Import', parsed.error);
+      return;
+    }
+    const file = parsed.file;
+    const target = matchProfile(file.player, profiles);
+    const count = file.games.length;
+
+    // No profile by that name — offer to build one from the file, which also
+    // brings across the stat set so both phones stay in step.
+    if (!target) {
+      Alert.alert(
+        `Add ${file.player.name}?`,
+        `You don't have a player called ${file.player.name}. Create the profile and add ${count} game${count === 1 ? '' : 's'}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Create & Import',
+            onPress: () => {
+              const created = importProfile(file.player);
+              const added = importGames(file.games.map(g => toGameEntry(g, created.id, 1)));
+              setSelectedId(created.id);
+              Alert.alert('Imported', `${file.player.name} added with ${added} game${added === 1 ? '' : 's'}.`);
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    const plan = planMerge(file, gamesForKid(target.id), target.id);
+    const season = profileSeason(target);
+    const parts: string[] = [];
+    if (plan.fresh.length) parts.push(`${plan.fresh.length} new game${plan.fresh.length === 1 ? '' : 's'}`);
+    if (plan.alreadyHave.length) parts.push(`${plan.alreadyHave.length} already imported`);
+    if (plan.possibleOverlap.length) parts.push(`${plan.possibleOverlap.length} that look like games you already have`);
+
+    if (plan.fresh.length === 0 && plan.possibleOverlap.length === 0) {
+      Alert.alert('Nothing New', `You already have all ${count} game${count === 1 ? '' : 's'} in that file.`);
+      return;
+    }
+
+    const addTo = (games: typeof plan.fresh) => {
+      const added = importGames(games.map(g => toGameEntry(g, target.id, season)));
+      Alert.alert('Imported', `${added} game${added === 1 ? '' : 's'} added to ${target.name}.`);
+    };
+
+    Alert.alert(
+      `Import to ${target.name}?`,
+      `This file has ${parts.join(', ')}.` +
+        (plan.possibleOverlap.length
+          ? '\n\nGames on the same day against the same opponent may be the same game tracked twice.'
+          : ''),
+      [
+        { text: 'Cancel', style: 'cancel' },
+        ...(plan.fresh.length
+          ? [{ text: `Add ${plan.fresh.length} New`, onPress: () => addTo(plan.fresh) }]
+          : []),
+        ...(plan.possibleOverlap.length
+          ? [{
+              text: `Add All ${plan.fresh.length + plan.possibleOverlap.length}`,
+              onPress: () => addTo([...plan.fresh, ...plan.possibleOverlap.map(o => o.incoming)]),
+            }]
+          : []),
+      ],
+    );
+  };
+
   const handleNewSeason = (profile: KidProfile) => {
     const season = profileSeason(profile);
     const gamesThisSeason = gamesForKid(profile.id).filter(g => gameSeason(g) === season).length;
@@ -201,6 +288,12 @@ export default function MyKid() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.seasonBtn}
+                    onPress={() => router.push({ pathname: '/kidexport', params: { kidId: profile.id } })}
+                  >
+                    <Text style={styles.seasonBtnText}>📤 SHARE</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.seasonBtn}
                     onPress={() => router.push({ pathname: '/kidseason', params: { kidId: profile.id } })}
                   >
                     <Text style={styles.seasonBtnText}>📈 SEASON</Text>
@@ -242,6 +335,13 @@ export default function MyKid() {
                   })}
                 </View>
 
+                <TouchableOpacity
+                  style={styles.newSeasonBtn}
+                  onPress={() => router.push({ pathname: '/kidmanual', params: { kidId: profile.id } })}
+                >
+                  <Text style={styles.newSeasonBtnText}>✎ ADD A GAME BY HAND</Text>
+                </TouchableOpacity>
+
                 <TouchableOpacity style={styles.newSeasonBtn} onPress={() => handleNewSeason(profile)}>
                   <Text style={styles.newSeasonBtnText}>⟳ START NEW SEASON</Text>
                 </TouchableOpacity>
@@ -253,6 +353,15 @@ export default function MyKid() {
             )}
           </View>
         ))}
+
+        {!loading && (
+          <TouchableOpacity style={styles.importRow} onPress={importFromFile}>
+            <Text style={styles.importText}>⤓ IMPORT GAMES FROM A FILE</Text>
+            <Text style={styles.importHint}>
+              Games another parent tracked and sent you
+            </Text>
+          </TouchableOpacity>
+        )}
 
         <View style={{ height: 20 }} />
       </ScrollView>
@@ -400,6 +509,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10, alignItems: 'center', marginTop: 16,
   },
   newSeasonBtnText: { color: '#C8A040', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+  importRow: {
+    borderWidth: 1, borderStyle: 'dashed', borderColor: '#3D2800', borderRadius: 8,
+    paddingVertical: 14, alignItems: 'center', marginTop: 8,
+  },
+  importText: { color: '#C8A040', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
+  importHint: { color: '#5A4210', fontSize: 10, marginTop: 3 },
   deleteRow: { alignItems: 'center', marginTop: 8, paddingVertical: 8 },
   deleteRowText: { color: '#7A1A1A', fontSize: 11, fontWeight: '700', letterSpacing: 1 },
   overlay: { flex: 1, backgroundColor: '#000000BB', justifyContent: 'center', alignItems: 'center' },

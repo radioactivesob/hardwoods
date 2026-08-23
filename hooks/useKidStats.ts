@@ -117,6 +117,39 @@ export function useKidStats() {
     [store.games],
   );
 
+  /**
+   * Add games that arrived from another phone. Ids are content-derived, so
+   * filtering on them makes importing the same file twice a no-op even if
+   * the caller's merge plan was built against stale state.
+   */
+  const importGames = useCallback((incoming: GameEntry[]) => {
+    let added = 0;
+    update(prev => {
+      const have = new Set(prev.games.map(g => g.id));
+      const fresh = incoming.filter(g => !have.has(g.id));
+      added = fresh.length;
+      return { ...prev, games: [...fresh, ...prev.games] };
+    });
+    return added;
+  }, [update]);
+
+  /** Create a profile from a transfer file's player block. */
+  const importProfile = useCallback((player: {
+    name: string; number?: string; teamName?: string; color?: string; enabledStats: StatKey[];
+  }) => {
+    const profile: KidProfile = {
+      id: Date.now().toString(),
+      name: player.name,
+      number: player.number,
+      teamName: player.teamName,
+      color: player.color,
+      enabledStats: player.enabledStats.length ? [...player.enabledStats] : [...DEFAULT_ENABLED_STATS],
+      createdAt: Date.now(),
+    };
+    update(prev => ({ ...prev, profiles: [profile, ...prev.profiles] }));
+    return profile;
+  }, [update]);
+
   return {
     profiles: store.profiles,
     games: store.games,
@@ -129,6 +162,8 @@ export function useKidStats() {
     deleteGame,
     gamesForKid,
     startNewSeason,
+    importGames,
+    importProfile,
     reload,
   };
 }
