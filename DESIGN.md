@@ -171,9 +171,15 @@ the status bar. Sources live in `appstore/`, output in `appstore/marketing/`.
 - **Coach export** (session/season data as PDF or CSV for a coach) — designed,
   deliberately deferred. Should reuse the `kidTransfer` machinery.
 - **AirDrop import path is unverified.** The document-type declarations in
-  `app.json` (`UTExportedTypeDeclarations` / `CFBundleDocumentTypes`) can't be
-  exercised in the simulator. The in-app Import button path is tested; the
-  "Hardwoods appears in the AirDrop sheet" path needs two real devices.
+  `app.json` (`UTExportedTypeDeclarations` / `CFBundleDocumentTypes` /
+  `LSSupportsOpeningDocumentsInPlace`) can't be exercised in the simulator. The
+  in-app Import button path is tested; the "Hardwoods appears in the AirDrop
+  sheet" path needs two real devices. Note `LSSupportsOpeningDocumentsInPlace`
+  is deliberately `false` — Apple's ITMS-90737 warning suggests `YES`, but that
+  is aimed at document-editing apps; we read a file once and merge it, so the
+  copy-in behaviour of `NO` is both accurate and avoids needing security-scoped
+  URL handling. Declaring `CFBundleDocumentTypes` without this key is a delivery
+  warning and leaves the behaviour undefined.
 - **`useScreenOrientation` hooks are no-ops.** Orientation is handled by the
   Info.plist declarations plus per-screen layout. Fine in practice; means an
   iPad can show a landscape-designed screen in portrait.
