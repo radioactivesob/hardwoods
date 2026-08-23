@@ -111,6 +111,15 @@ errors — a bad file should never produce a half-merged season.
 (player, date, opponent, event log), which is what makes re-importing the same
 file a no-op.
 
+**Never read a value assigned inside a `setState` updater.** React runs the
+updater later, so the outer function returns before it fires. `importGames`
+reported "0 games added" for this reason while actually importing correctly —
+compute the result from current state first, then call `update`.
+
+**Uninstalling the app deletes everything.** All data is on-device by design, so
+there is no recovery. Exporting from My Kid (`SELECT ALL` → share to yourself)
+is the only backup, and is worth suggesting before anyone deletes or reinstalls.
+
 **Undo names what it undoes** — "UNDO MISS — Left wing", not just "UNDO".
 
 **Palette:** espresso `#1A0F00` / `#0D0700`, gold `#C8A040` / `#FFC93C`, muted

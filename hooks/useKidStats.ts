@@ -123,15 +123,19 @@ export function useKidStats() {
    * the caller's merge plan was built against stale state.
    */
   const importGames = useCallback((incoming: GameEntry[]) => {
-    let added = 0;
+    // Work out what's new *before* calling update — a state updater runs
+    // later, so anything assigned inside it can't be returned from here.
+    const have = new Set(store.games.map(g => g.id));
+    const fresh = incoming.filter(g => !have.has(g.id));
+    if (fresh.length === 0) return 0;
     update(prev => {
-      const have = new Set(prev.games.map(g => g.id));
-      const fresh = incoming.filter(g => !have.has(g.id));
-      added = fresh.length;
-      return { ...prev, games: [...fresh, ...prev.games] };
+      // Re-check inside the updater as well, so a stale closure can never
+      // introduce a duplicate even if the count above was optimistic.
+      const seen = new Set(prev.games.map(g => g.id));
+      return { ...prev, games: [...fresh.filter(g => !seen.has(g.id)), ...prev.games] };
     });
-    return added;
-  }, [update]);
+    return fresh.length;
+  }, [update, store.games]);
 
   /** Create a profile from a transfer file's player block. */
   const importProfile = useCallback((player: {
