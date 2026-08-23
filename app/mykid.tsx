@@ -174,10 +174,19 @@ export default function MyKid() {
     const parts: string[] = [];
     if (plan.fresh.length) parts.push(`${plan.fresh.length} new game${plan.fresh.length === 1 ? '' : 's'}`);
     if (plan.alreadyHave.length) parts.push(`${plan.alreadyHave.length} already imported`);
-    if (plan.possibleOverlap.length) parts.push(`${plan.possibleOverlap.length} that look like games you already have`);
+    if (plan.possibleOverlap.length) parts.push(
+      plan.possibleOverlap.length === 1
+        ? '1 that looks like a game you already have'
+        : `${plan.possibleOverlap.length} that look like games you already have`,
+    );
 
     if (plan.fresh.length === 0 && plan.possibleOverlap.length === 0) {
-      Alert.alert('Nothing New', `You already have all ${count} game${count === 1 ? '' : 's'} in that file.`);
+      Alert.alert(
+        'Nothing New',
+        count === 1
+          ? 'You already have that game.'
+          : `You already have all ${count} games in that file.`,
+      );
       return;
     }
 
