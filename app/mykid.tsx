@@ -281,8 +281,8 @@ export default function MyKid() {
             {selectedId === profile.id && (
               <View style={styles.detail}>
                 <View style={styles.actionRow}>
-                  <TouchableOpacity style={[styles.startBtn, { flex: 2 }]} onPress={() => startGame(profile)}>
-                    <Text style={styles.startBtnText}>
+                  <TouchableOpacity style={[styles.startBtn, { flex: 1.6 }]} onPress={() => startGame(profile)}>
+                    <Text style={styles.startBtnText} numberOfLines={1} adjustsFontSizeToFit>
                       {liveGame?.kidId === profile.id ? '▶ RESUME GAME' : '▶ START GAME'}
                     </Text>
                   </TouchableOpacity>
@@ -290,13 +290,17 @@ export default function MyKid() {
                     style={styles.seasonBtn}
                     onPress={() => router.push({ pathname: '/kidexport', params: { kidId: profile.id } })}
                   >
-                    <Text style={styles.seasonBtnText}>📤 SHARE</Text>
+                    <Text style={styles.seasonBtnText} numberOfLines={1} adjustsFontSizeToFit>
+                      SHARE
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.seasonBtn}
                     onPress={() => router.push({ pathname: '/kidseason', params: { kidId: profile.id } })}
                   >
-                    <Text style={styles.seasonBtnText}>📈 SEASON</Text>
+                    <Text style={styles.seasonBtnText} numberOfLines={1} adjustsFontSizeToFit>
+                      SEASON
+                    </Text>
                   </TouchableOpacity>
                 </View>
 
@@ -479,7 +483,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0D0700', borderRadius: 8, borderWidth: 1, borderColor: '#2A1A00',
     padding: 14, marginBottom: 8, marginTop: -4,
   },
-  actionRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  actionRow: { flexDirection: 'row', gap: 8, marginBottom: 16, alignItems: 'stretch' },
   startBtn: {
     backgroundColor: '#8B6914', borderRadius: 8, paddingVertical: 14,
     alignItems: 'center',
