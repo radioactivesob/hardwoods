@@ -231,5 +231,7 @@ export function matchProfile(
 export function suggestFileName(player: TransferPlayer, count: number): string {
   const safe = player.name.trim().replace(/[^\w-]+/g, '-').toLowerCase() || 'player';
   const d = new Date().toISOString().slice(0, 10);
-  return `${safe}-${count}game${count === 1 ? '' : 's'}-${d}.hardwoods.json`;
+  // Our own extension, not .json — iOS then hands the file to Hardwoods
+  // instead of previewing it as text.
+  return `${safe}-${count}game${count === 1 ? '' : 's'}-${d}.hardwoods`;
 }

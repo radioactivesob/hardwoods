@@ -17,6 +17,30 @@
           "UIInterfaceOrientationLandscapeRight",
           "UIInterfaceOrientationPortrait",
           "UIInterfaceOrientationPortraitUpsideDown"
+        ],
+        "UTExportedTypeDeclarations": [
+          {
+            "UTTypeIdentifier": "com.hardwoods.gamefile",
+            "UTTypeDescription": "Hardwoods Game File",
+            "UTTypeConformsTo": [
+              "public.json"
+            ],
+            "UTTypeTagSpecification": {
+              "public.filename-extension": [
+                "hardwoods"
+              ]
+            }
+          }
+        ],
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeName": "Hardwoods Game File",
+            "CFBundleTypeRole": "Editor",
+            "LSHandlerRank": "Owner",
+            "LSItemContentTypes": [
+              "com.hardwoods.gamefile"
+            ]
+          }
         ]
       }
     },

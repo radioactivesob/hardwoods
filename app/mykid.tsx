@@ -5,9 +5,7 @@ import {
 import { Text, TextInput } from '../components/AppText';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { File } from 'expo-file-system';
 import { useKidStats, IN_PROGRESS_KEY } from '../hooks/useKidStats';
-import { parseTransfer, planMerge, matchProfile, toGameEntry } from '../hooks/kidTransfer';
 import { STAT_DEFS, StatKey, MAX_ENABLED_STATS, STAT_ORDER, KidProfile, pointsFromTotals, KID_COLORS, DEFAULT_KID_COLOR, kidColor, profileSeason, gameSeason } from '../hooks/kidStats';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
@@ -16,7 +14,7 @@ const ALL_ORIENTATIONS = ['portrait', 'portrait-upside-down', 'landscape-left', 
 export default function MyKid() {
   useAllOrientations();
   const router = useRouter();
-  const { profiles, loading, addProfile, updateProfile, deleteProfile, gamesForKid, startNewSeason, importGames, importProfile, reload } = useKidStats();
+  const { profiles, loading, addProfile, updateProfile, deleteProfile, gamesForKid, startNewSeason, reload } = useKidStats();
   // A paused game shows on its kid's card and turns START into RESUME.
   // Re-read on every focus — this screen is where you land after pausing.
   const [liveGame, setLiveGame] = useState<{ kidId: string; count: number } | null>(null);
@@ -120,100 +118,6 @@ export default function MyKid() {
     const totalPoints = games.reduce((sum, g) => sum + pointsFromTotals(g.totals), 0);
     const ppg = (totalPoints / games.length).toFixed(1);
     return `${prefix}${games.length} game${games.length === 1 ? '' : 's'} · ${ppg} pts/game`;
-  };
-
-  /**
-   * Merge games another parent tracked and sent over. The file names the
-   * player, so this figures out which profile it belongs to rather than
-   * asking, and reports exactly what it will and won't add.
-   */
-  const importFromFile = async () => {
-    let json: unknown;
-    try {
-      const picked = await File.pickFileAsync({ mimeTypes: ['application/json'] });
-      if (picked.canceled || !picked.result) return;
-      json = JSON.parse(await picked.result.text());
-    } catch {
-      Alert.alert('Could Not Read File', "That file couldn't be opened, or isn't Hardwoods data.");
-      return;
-    }
-
-    const parsed = parseTransfer(json);
-    if (!parsed.ok) {
-      Alert.alert('Could Not Import', parsed.error);
-      return;
-    }
-    const file = parsed.file;
-    const target = matchProfile(file.player, profiles);
-    const count = file.games.length;
-
-    // No profile by that name — offer to build one from the file, which also
-    // brings across the stat set so both phones stay in step.
-    if (!target) {
-      Alert.alert(
-        `Add ${file.player.name}?`,
-        `You don't have a player called ${file.player.name}. Create the profile and add ${count} game${count === 1 ? '' : 's'}?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Create & Import',
-            onPress: () => {
-              const created = importProfile(file.player);
-              const added = importGames(file.games.map(g => toGameEntry(g, created.id, 1)));
-              setSelectedId(created.id);
-              Alert.alert('Imported', `${file.player.name} added with ${added} game${added === 1 ? '' : 's'}.`);
-            },
-          },
-        ],
-      );
-      return;
-    }
-
-    const plan = planMerge(file, gamesForKid(target.id), target.id);
-    const season = profileSeason(target);
-    const parts: string[] = [];
-    if (plan.fresh.length) parts.push(`${plan.fresh.length} new game${plan.fresh.length === 1 ? '' : 's'}`);
-    if (plan.alreadyHave.length) parts.push(`${plan.alreadyHave.length} already imported`);
-    if (plan.possibleOverlap.length) parts.push(
-      plan.possibleOverlap.length === 1
-        ? '1 that looks like a game you already have'
-        : `${plan.possibleOverlap.length} that look like games you already have`,
-    );
-
-    if (plan.fresh.length === 0 && plan.possibleOverlap.length === 0) {
-      Alert.alert(
-        'Nothing New',
-        count === 1
-          ? 'You already have that game.'
-          : `You already have all ${count} games in that file.`,
-      );
-      return;
-    }
-
-    const addTo = (games: typeof plan.fresh) => {
-      const added = importGames(games.map(g => toGameEntry(g, target.id, season)));
-      Alert.alert('Imported', `${added} game${added === 1 ? '' : 's'} added to ${target.name}.`);
-    };
-
-    Alert.alert(
-      `Import to ${target.name}?`,
-      `This file has ${parts.join(', ')}.` +
-        (plan.possibleOverlap.length
-          ? '\n\nGames on the same day against the same opponent may be the same game tracked twice.'
-          : ''),
-      [
-        { text: 'Cancel', style: 'cancel' },
-        ...(plan.fresh.length
-          ? [{ text: `Add ${plan.fresh.length} New`, onPress: () => addTo(plan.fresh) }]
-          : []),
-        ...(plan.possibleOverlap.length
-          ? [{
-              text: `Add All ${plan.fresh.length + plan.possibleOverlap.length}`,
-              onPress: () => addTo([...plan.fresh, ...plan.possibleOverlap.map(o => o.incoming)]),
-            }]
-          : []),
-      ],
-    );
   };
 
   const handleNewSeason = (profile: KidProfile) => {
@@ -368,7 +272,7 @@ export default function MyKid() {
         ))}
 
         {!loading && (
-          <TouchableOpacity style={styles.importRow} onPress={importFromFile}>
+          <TouchableOpacity style={styles.importRow} onPress={() => router.push('/kidimport')}>
             <Text style={styles.importText}>⤓ IMPORT GAMES FROM A FILE</Text>
             <Text style={styles.importHint}>
               Games another parent tracked and sent you
