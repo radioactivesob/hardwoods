@@ -174,16 +174,19 @@ the status bar. Sources live in `appstore/`, output in `appstore/marketing/`.
 
 ## Known gaps
 
-- **Hermes memory regression** in SDK 56. Fixed in SDK 57; every shipped version
-  so far carries it. Crosscourt has already made the SDK 57 jump, so that
-  migration is partly scouted.
+- ~~Hermes memory regression in SDK 56.~~ Fixed by moving to SDK 57 / RN 0.86 in
+  2.6.0. The upgrade was `npx expo install expo@^57 --fix` and nothing else — no
+  source changes, `react-native-svg` and `react-native-view-shot` carried over,
+  and `File.pickFileAsync` already used SDK 57's `{canceled, result}` shape.
+  Public App Store releases still trail this, so anything at or below 2.3.1 in
+  the wild carries the regression.
 - **Coach export** (session/season data as PDF or CSV for a coach) — designed,
   deliberately deferred. Should reuse the `kidTransfer` machinery.
-- **AirDrop import path is unverified.** The document-type declarations in
-  `app.json` (`UTExportedTypeDeclarations` / `CFBundleDocumentTypes` /
-  `LSSupportsOpeningDocumentsInPlace`) can't be exercised in the simulator. The
-  in-app Import button path is tested; the "Hardwoods appears in the AirDrop
-  sheet" path needs two real devices. Note `LSSupportsOpeningDocumentsInPlace`
+- **AirDrop import can only be tested on real devices.** The document-type
+  declarations in `app.json` (`UTExportedTypeDeclarations` /
+  `CFBundleDocumentTypes` / `LSSupportsOpeningDocumentsInPlace`) can't be
+  exercised in the simulator. Both directions were confirmed on two phones in
+  2.5.2, over AirDrop and over text. Note `LSSupportsOpeningDocumentsInPlace`
   is deliberately `false` — Apple's ITMS-90737 warning suggests `YES`, but that
   is aimed at document-editing apps; we read a file once and merge it, so the
   copy-in behaviour of `NO` is both accurate and avoids needing security-scoped
