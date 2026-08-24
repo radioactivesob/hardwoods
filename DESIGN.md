@@ -153,11 +153,21 @@ Node 22 (`nvm use 22`). The project **must not live in an iCloud-synced folder**
 iCloud tags files with metadata that makes codesign fail. It lives in
 `~/Projects/hardwoods` for that reason.
 
+**Cloud builds are a limited monthly resource** — the EAS free tier caps them,
+and this is a hobby project that isn't going to pay for more. Don't cut a build
+per fix. Batch changes and build when there's a release to make, or a change that
+genuinely can't be checked any other way. Verify on the local simulator first;
+it's free and it works.
+
 ```bash
 npx expo-doctor                                    # before every build
 npx eas-cli build --platform ios --profile production --non-interactive --no-wait
 npx eas-cli submit --platform ios --latest --non-interactive
 ```
+
+`eas build --platform ios --local` builds on this Mac instead, which does not
+draw down the cloud build quota (it needs the working local Xcode toolchain and
+the `LANG`/`LC_ALL` vars below). `eas submit` doesn't consume build credits.
 
 `submit` uploads to App Store Connect and makes the build available in
 TestFlight. It does **not** submit for App Review — that's a separate deliberate
