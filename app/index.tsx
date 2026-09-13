@@ -35,7 +35,7 @@ export default function Home() {
         <Text style={styles.brand} numberOfLines={1} adjustsFontSizeToFit>
           HARDWOODS
         </Text>
-        <Text style={styles.tagline}>Youth basketball, in the book.</Text>
+        <Text style={styles.tagline}>Every game. Every stat. From the stands.</Text>
 
         {MODES.map(m => (
           <TouchableOpacity
