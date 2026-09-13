@@ -62,6 +62,33 @@ export function playerStatsFromTotals(totals: Record<StatKey, number>): PlayerSt
   };
 }
 
+/**
+ * The reverse bridge: a scorebook line as a synthetic tap log, so a game
+ * kept in the Full Scorebook can land in a My Kid profile shaped like every
+ * other game there. Rebounds, steals and assists aren't in the book, so
+ * they're honestly absent rather than zero-filled.
+ */
+export function eventsFromPlayerStats(stats: PlayerStats, at: number): StatEvent[] {
+  const counts: [StatKey, number][] = [
+    ['points3', stats.threeMade],
+    ['miss3', stats.threeAttempted - stats.threeMade],
+    ['points2', stats.fgMade - stats.threeMade],
+    ['miss2', (stats.fgAttempted - stats.fgMade) - (stats.threeAttempted - stats.threeMade)],
+    ['ftMade', stats.ftMade],
+    ['ftMiss', stats.ftAttempted - stats.ftMade],
+    ['foul', stats.fouls],
+  ];
+  const events: StatEvent[] = [];
+  let t = at;
+  counts.forEach(([key, n]) => {
+    for (let i = 0; i < Math.max(0, n); i++) {
+      t += 1000;
+      events.push({ key, at: t });
+    }
+  });
+  return events;
+}
+
 export function eventsForPlayer(events: TeamStatEvent[], player: number): StatEvent[] {
   return events.filter(e => e.player === player).map(({ key, at }) => ({ key, at }));
 }

@@ -6,6 +6,8 @@ import { Text } from '../components/AppText';
 import { useRouter } from 'expo-router';
 import { useGame } from '../context/GameContext';
 import { useTeamGames, archivedGameFromState } from '../hooks/useTeamGames';
+import { useKidStats } from '../hooks/useKidStats';
+import { eventsFromPlayerStats } from '../hooks/teamStats';
 import { useLandscapeOnly } from '../hooks/useScreenOrientation';
 
 export default function Scoreboard() {
@@ -17,6 +19,7 @@ export default function Scoreboard() {
   const portrait = height >= width;
   const { state, dispatch, undo, canUndo, totalScore } = useGame();
   const { archiveGame } = useTeamGames();
+  const { profiles, saveGame, loading: kidsLoading } = useKidStats();
   const { teamA, teamB, currentPeriod, teamAFouls, teamBFouls, teamATimeoutsLeft, teamBTimeoutsLeft, rules } = state;
 
   const scoreA = totalScore('A');
@@ -59,11 +62,56 @@ export default function Scoreboard() {
           text: 'Save & End',
           onPress: () => {
             archiveGame(archivedGameFromState(state));
+            offerKidProfiles();
             dispatch({ type: 'CLEAR_SCORES' });
-            Alert.alert('Game Saved', 'Find it under Team Seasons on the home screen.');
           },
         },
       ]
+    );
+  };
+
+  // A player in the book who also has a My Kid profile on this phone gets
+  // the game saved there too. The book only knows shooting and fouls, so
+  // rebounds, steals and assists won't come across — but it beats losing
+  // the game from her season because someone was running the scoreboard.
+  const offerKidProfiles = () => {
+    const done = () => Alert.alert('Game Saved', 'Find it under Team Seasons on the home screen.');
+    if (kidsLoading) return done();
+    const sides = [
+      { team: teamA, us: scoreA, them: scoreB },
+      { team: teamB, us: scoreB, them: scoreA },
+    ];
+    const matches = sides.flatMap(({ team, us, them }) =>
+      team.players
+        .filter(p => !p.isOut && (p.stats.fgAttempted > 0 || p.stats.ftAttempted > 0 || p.stats.fouls > 0))
+        .map(p => ({
+          player: p,
+          opponent: team === teamA ? teamB.name : teamA.name,
+          score: { us, them },
+          profile: profiles.find(k => k.name.trim().toLowerCase() === p.name.trim().toLowerCase()),
+        }))
+        .filter((m): m is typeof m & { profile: NonNullable<typeof m.profile> } => !!m.profile),
+    );
+    if (matches.length === 0) return done();
+    const names = matches.map(m => m.profile.name).join(', ');
+    Alert.alert(
+      `Save to ${names}?`,
+      `${matches.length === 1 ? 'There\'s a My Kid profile' : 'There are My Kid profiles'} on this phone. Add this game's shooting and fouls from the book?`,
+      [
+        { text: 'Not Now', style: 'cancel', onPress: done },
+        {
+          text: 'Save',
+          onPress: () => {
+            const at = Date.now();
+            matches.forEach(m => {
+              saveGame(m.profile.id, eventsFromPlayerStats(m.player.stats, at), {
+                opponent: m.opponent, date: at, teamScore: m.score,
+              });
+            });
+            done();
+          },
+        },
+      ],
     );
   };
 
