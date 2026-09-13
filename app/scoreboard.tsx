@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { useGame } from '../context/GameContext';
 import { useTeamGames, archivedGameFromState } from '../hooks/useTeamGames';
 import { useKidStats } from '../hooks/useKidStats';
+import { findProfileForPlayer } from '../hooks/kidStats';
 import { eventsFromPlayerStats } from '../hooks/teamStats';
 import { useLandscapeOnly } from '../hooks/useScreenOrientation';
 
@@ -88,7 +89,7 @@ export default function Scoreboard() {
           player: p,
           opponent: team === teamA ? teamB.name : teamA.name,
           score: { us, them },
-          profile: profiles.find(k => k.name.trim().toLowerCase() === p.name.trim().toLowerCase()),
+          profile: findProfileForPlayer(profiles, p, team.players),
         }))
         .filter((m): m is typeof m & { profile: NonNullable<typeof m.profile> } => !!m.profile),
     );

@@ -10,7 +10,7 @@ import ScorePrompt from '../components/ScorePrompt';
 import { useTeamLibrary } from '../hooks/useTeamLibrary';
 import { useTeamGames } from '../hooks/useTeamGames';
 import { useKidStats } from '../hooks/useKidStats';
-import { STAT_DEFS, StatKey, sortByStatOrder, pointsFromTotals } from '../hooks/kidStats';
+import { STAT_DEFS, StatKey, sortByStatOrder, pointsFromTotals, findProfileForPlayer } from '../hooks/kidStats';
 import {
   TeamStatEvent, TeamStatsInProgress, TEAM_STATS_IN_PROGRESS_KEY,
   teamEnabledStats, totalsByPlayer, eventsForPlayer, archivedGameFromTeamStats,
@@ -155,7 +155,7 @@ export default function TeamStatsGame() {
       .filter(({ i }) => !out.includes(i) && eventsForPlayer(events, i).length > 0)
       .map(({ p, i }) => ({
         i,
-        profile: profiles.find(k => k.name.trim().toLowerCase() === p.name.trim().toLowerCase()),
+        profile: findProfileForPlayer(profiles, p, team.players),
       }))
       .filter((m): m is { i: number; profile: NonNullable<typeof m.profile> } => !!m.profile);
 

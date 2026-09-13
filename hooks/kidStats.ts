@@ -79,6 +79,43 @@ export interface KidProfile {
   createdAt: number;
 }
 
+const normName = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+const firstName = (s: string) => normName(s).split(' ')[0];
+
+/**
+ * Which My Kid profile, if any, a roster player belongs to. Rosters tend to
+ * carry full names ("Evelyn Cooper") while a profile is usually just the
+ * first name, so exact equality misses the common case. Rules, in order:
+ *
+ *  1. Same full name.
+ *  2. Same first name and the same jersey number, when both have one.
+ *  3. Same first name, and no other player on the roster shares it — so a
+ *     lone "Evelyn" still matches without a number, but two Evelyns don't
+ *     guess.
+ */
+export function findProfileForPlayer(
+  profiles: KidProfile[],
+  player: { name: string; number?: string },
+  roster: { name: string }[],
+): KidProfile | undefined {
+  const exact = profiles.find(p => normName(p.name) === normName(player.name));
+  if (exact) return exact;
+
+  const first = firstName(player.name);
+  if (!first) return undefined;
+  const byFirst = profiles.filter(p => firstName(p.name) === first);
+  if (byFirst.length === 0) return undefined;
+
+  const num = player.number?.trim();
+  if (num) {
+    const byNumber = byFirst.find(p => p.number?.trim() === num);
+    if (byNumber) return byNumber;
+  }
+
+  const uniqueOnRoster = roster.filter(r => firstName(r.name) === first).length === 1;
+  return uniqueOnRoster && byFirst.length === 1 ? byFirst[0] : undefined;
+}
+
 export function profileSeason(profile: KidProfile): number {
   return profile.currentSeason ?? 1;
 }

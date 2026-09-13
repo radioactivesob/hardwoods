@@ -53,6 +53,42 @@ export default function MyKid() {
     setSelectedId(profile.id);
   };
 
+  // Name and number are what the scorebooks match against, so they need to
+  // be editable after the fact — a profile made as "Evelyn" should be able
+  // to catch up with a roster that says "Evelyn Cooper".
+  const handleEdit = (profile: KidProfile) => {
+    Alert.prompt(
+      'Name',
+      'As it should appear on cards and match rosters.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Next',
+          onPress: (name?: string) => {
+            const trimmed = (name ?? '').trim();
+            if (!trimmed) return;
+            Alert.prompt(
+              'Jersey Number',
+              'Leave blank if none.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Save',
+                  onPress: (number?: string) =>
+                    updateProfile(profile.id, { name: trimmed, number: (number ?? '').trim() || undefined }),
+                },
+              ],
+              'plain-text',
+              profile.number ?? '',
+            );
+          },
+        },
+      ],
+      'plain-text',
+      profile.name,
+    );
+  };
+
   const handleDelete = (profile: KidProfile) => {
     const games = gamesForKid(profile.id).length;
     Alert.alert(
@@ -169,6 +205,7 @@ export default function MyKid() {
             <TouchableOpacity
               style={[styles.kidCard, selectedId === profile.id && styles.kidCardActive]}
               onPress={() => setSelectedId(selectedId === profile.id ? null : profile.id)}
+              onLongPress={() => handleEdit(profile)}
             >
               <View style={[styles.kidBadge, { borderColor: kidColor(profile) }]}>
                 <Text style={[styles.kidBadgeText, { color: kidColor(profile) }]}>
@@ -263,6 +300,9 @@ export default function MyKid() {
                   <Text style={styles.newSeasonBtnText}>⟳ START NEW SEASON</Text>
                 </TouchableOpacity>
 
+                <TouchableOpacity style={styles.deleteRow} onPress={() => handleEdit(profile)}>
+                  <Text style={[styles.deleteRowText, { color: '#8B6914' }]}>EDIT NAME & NUMBER</Text>
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.deleteRow} onPress={() => handleDelete(profile)}>
                   <Text style={styles.deleteRowText}>DELETE PROFILE</Text>
                 </TouchableOpacity>
