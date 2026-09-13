@@ -6,6 +6,12 @@ export interface Player {
   number: string;
   isStarting: boolean;
   isActive: boolean;
+  /**
+   * Not dressed tonight. Stays on the roster so nobody has to re-add her next
+   * week, but never appears on the bench picker or in this game's box score.
+   * Per game, never saved to the team library.
+   */
+  isOut?: boolean;
   stats: PlayerStats;
 }
 
@@ -420,7 +426,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const benchPlayers = (team: 'A' | 'B') => {
     const key = team === 'A' ? 'teamA' : 'teamB';
-    return state[key].players.filter(p => !p.isActive);
+    return state[key].players.filter(p => !p.isActive && !p.isOut);
   };
 
   return (

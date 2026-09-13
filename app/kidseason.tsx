@@ -61,7 +61,7 @@ export default function KidSeason() {
   useAllOrientations();
   const router = useRouter();
   const { kidId } = useLocalSearchParams<{ kidId: string }>();
-  const { profiles, gamesForKid, deleteGame, setGameScore } = useKidStats();
+  const { profiles, gamesForKid, deleteGame, setGameScore, setGameOpponent } = useKidStats();
   const profile = profiles.find(p => p.id === kidId) ?? null;
   const [metricKey, setMetricKey] = useState<MetricKey>('pts');
   const [seasonPick, setSeasonPick] = useState<number | null>(null);
@@ -106,6 +106,23 @@ export default function KidSeason() {
         {
           text: game.teamScore ? 'Edit Final Score' : 'Add Final Score',
           onPress: () => setScoreTarget(game),
+        },
+        {
+          text: game.opponent ? 'Edit Opponent' : 'Add Opponent',
+          onPress: () => {
+            // Forgetting the opponent in the rush before tip-off is common;
+            // this is the after-the-fact fix.
+            Alert.prompt(
+              'Opponent',
+              'Who was this game against?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Save', onPress: (v?: string) => setGameOpponent(game.id, v ?? '') },
+              ],
+              'plain-text',
+              game.opponent ?? '',
+            );
+          },
         },
         {
           text: 'Delete Game',

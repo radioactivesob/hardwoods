@@ -72,7 +72,7 @@ export default function Scorebook() {
 
   const generateHTML = () => {
     const teamRows = (team: typeof teamA) => team.players
-      .filter(p => p.name || p.number)
+      .filter(p => (p.name || p.number) && !p.isOut)
       .map(p => {
         const s = p.stats;
         return `<tr>
@@ -305,7 +305,7 @@ export default function Scorebook() {
                 <Text style={[styles.cell, styles.headerCell, styles.cellPts]}>PTS</Text>
                 {editMode && <Text style={[styles.cell, styles.headerCell, { flex: 0.4 }]} />}
               </View>
-              {team.players.filter(p => p.name || p.number).map(p => renderPlayerRow(p, key))}
+              {team.players.filter(p => (p.name || p.number) && !p.isOut).map(p => renderPlayerRow(p, key))}
               {teamTotalsRow(team)}
             </View>
           </View>

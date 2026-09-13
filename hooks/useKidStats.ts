@@ -99,6 +99,16 @@ export function useKidStats() {
     }));
   }, [update]);
 
+  const setGameOpponent = useCallback((gameId: string, opponent: string) => {
+    const trimmed = opponent.trim();
+    update(prev => ({
+      ...prev,
+      games: prev.games.map(g =>
+        g.id === gameId ? { ...g, opponent: trimmed || undefined } : g,
+      ),
+    }));
+  }, [update]);
+
   const startNewSeason = useCallback((kidId: string) => {
     update(prev => ({
       ...prev,
@@ -163,6 +173,7 @@ export function useKidStats() {
     deleteProfile,
     saveGame,
     setGameScore,
+    setGameOpponent,
     deleteGame,
     gamesForKid,
     startNewSeason,

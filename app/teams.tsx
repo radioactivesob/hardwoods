@@ -38,14 +38,14 @@ export default function TeamSetup() {
   const setTeam = activeTeam === 'A' ? setTeamA : setTeamB;
 
   const save = () => {
-    const starters = teamA.players.filter(p => p.isStarting).length;
-    const startersB = teamB.players.filter(p => p.isStarting).length;
+    const starters = teamA.players.filter(p => p.isStarting && !p.isOut).length;
+    const startersB = teamB.players.filter(p => p.isStarting && !p.isOut).length;
     if (starters < 5 || startersB < 5) {
       Alert.alert('Needs 5 Starters', 'Each team must have exactly 5 starting players designated.');
       return;
     }
-    const finalA = { ...teamA, players: teamA.players.map(p => ({ ...p, isActive: p.isStarting })) };
-    const finalB = { ...teamB, players: teamB.players.map(p => ({ ...p, isActive: p.isStarting })) };
+    const finalA = { ...teamA, players: teamA.players.map(p => ({ ...p, isActive: p.isStarting && !p.isOut })) };
+    const finalB = { ...teamB, players: teamB.players.map(p => ({ ...p, isActive: p.isStarting && !p.isOut })) };
     dispatch({ type: 'SET_TEAM', team: 'A', config: finalA });
     dispatch({ type: 'SET_TEAM', team: 'B', config: finalB });
     router.back();
@@ -88,13 +88,25 @@ export default function TeamSetup() {
   };
 
   const toggleStarter = (id: string) => {
-    const starterCount = team.players.filter(p => p.isStarting && p.id !== id).length;
+    const starterCount = team.players.filter(p => p.isStarting && !p.isOut && p.id !== id).length;
     const player = team.players.find(p => p.id === id)!;
+    if (player.isOut) return;
     if (!player.isStarting && starterCount >= 5) {
       Alert.alert('5 Starters Max', 'Deselect another starter first.');
       return;
     }
     updatePlayer(id, 'isStarting', !player.isStarting);
+  };
+
+  // "Out" is for the night, not the roster — she keeps her spot. Going out
+  // drops her from the starting five so the count stays honest.
+  const toggleOut = (id: string) => {
+    setTeam(prev => ({
+      ...prev,
+      players: prev.players.map(p =>
+        p.id === id ? { ...p, isOut: !p.isOut, isStarting: false } : p,
+      ),
+    }));
   };
 
   const addPlayer = () => {
@@ -207,12 +219,15 @@ export default function TeamSetup() {
         {/* Roster */}
         <View style={styles.rosterHeader}>
           <Text style={styles.sectionLabel}>ROSTER ({team.players.length}/15)</Text>
-          <Text style={styles.starterCount}>Starters: {team.players.filter(p => p.isStarting).length}/5</Text>
+          <Text style={styles.starterCount}>Starters: {team.players.filter(p => p.isStarting && !p.isOut).length}/5</Text>
         </View>
-        <Text style={styles.rosterHint}>★ = Starter (need exactly 5)</Text>
+        <Text style={styles.rosterHint}>★ = Starter (need exactly 5) · OUT = not playing tonight, stays on the roster</Text>
 
         {team.players.map((p, idx) => (
-          <View key={p.id} style={[styles.playerRow, { borderLeftColor: team.color }]}>
+          <View
+            key={p.id}
+            style={[styles.playerRow, { borderLeftColor: p.isOut ? '#3D2800' : team.color }]}
+          >
             <View style={styles.moveCol}>
               <TouchableOpacity
                 style={styles.moveBtn}
@@ -231,7 +246,7 @@ export default function TeamSetup() {
             </View>
             <Text style={styles.playerIdx}>{idx + 1}</Text>
             <TextInput
-              style={styles.numInput}
+              style={[styles.numInput, p.isOut && styles.inputOut]}
               value={p.number}
               onChangeText={v => updatePlayer(p.id, 'number', v)}
               placeholder="#"
@@ -240,17 +255,24 @@ export default function TeamSetup() {
               maxLength={3}
             />
             <TextInput
-              style={styles.nameInput}
+              style={[styles.nameInput, p.isOut && styles.inputOut]}
               value={p.name}
               onChangeText={v => updatePlayer(p.id, 'name', v)}
               placeholder="Player Name"
               placeholderTextColor="#444"
             />
             <TouchableOpacity
-              style={[styles.starterBtn, p.isStarting && { backgroundColor: team.color }]}
+              style={[styles.starterBtn, p.isStarting && !p.isOut && { backgroundColor: team.color }]}
               onPress={() => toggleStarter(p.id)}
+              disabled={!!p.isOut}
             >
-              <Text style={[styles.starterBtnText, p.isStarting && { color: '#000' }]}>★</Text>
+              <Text style={[styles.starterBtnText, p.isStarting && !p.isOut && { color: '#000' }]}>★</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.outBtn, p.isOut && styles.outBtnOn]}
+              onPress={() => toggleOut(p.id)}
+            >
+              <Text style={[styles.outBtnText, p.isOut && styles.outBtnTextOn]}>OUT</Text>
             </TouchableOpacity>
             {team.players.length > 5 && (
               <TouchableOpacity style={styles.removeBtn} onPress={() => removePlayer(p.id)}>
@@ -386,6 +408,14 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#3D2800', justifyContent: 'center', alignItems: 'center',
   },
   starterBtnText: { color: '#555', fontSize: 16 },
+  inputOut: { color: '#666', textDecorationLine: 'line-through' },
+  outBtn: {
+    height: 32, paddingHorizontal: 8, borderRadius: 4, backgroundColor: '#1A0F00',
+    borderWidth: 1, borderColor: '#3D2800', justifyContent: 'center', alignItems: 'center',
+  },
+  outBtnOn: { backgroundColor: '#3A1212', borderColor: '#C25E5E' },
+  outBtnText: { color: '#555', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  outBtnTextOn: { color: '#FF6B6B' },
   removeBtn: { width: 28, height: 28, justifyContent: 'center', alignItems: 'center' },
   removeBtnText: { color: '#7A1A1A', fontSize: 14, fontWeight: '700' },
   addPlayerBtn: {

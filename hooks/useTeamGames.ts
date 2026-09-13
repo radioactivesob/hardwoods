@@ -33,8 +33,10 @@ function archiveTeam(team: GameState['teamA']): ArchivedTeam {
   return {
     name: team.name,
     color: team.color,
+    // Players marked out for the night are left off the archived box score,
+    // so a season's games-played count only includes games they dressed for.
     players: team.players
-      .filter(p => p.name || p.number)
+      .filter(p => (p.name || p.number) && !p.isOut)
       .map(p => ({ name: p.name, number: p.number, stats: { ...p.stats } })),
   };
 }
