@@ -32,15 +32,44 @@ one-time unlock, never a subscription.
 
 ## Where things stand
 
-Five modes, reachable from the landing page (`app/index.tsx`):
+Six modes, reachable from the landing page (`app/index.tsx`). **Stat tracking
+leads; the scorebooks follow** — decided 2026-09-13 after a season of real use
+showed My Kid and Team Stats are what the app is actually opened for, and the
+official book is the extra.
 
 | Mode | Screens | What it is |
 |---|---|---|
-| Full Scorebook | `scoreboard`, `scoring`, `scorebook`, `teams`, `rules` | The official book — rosters, per-player stats, fouls, periods, box score |
 | My Kid | `mykid`, `kidgame`, `kidseason`, `kidshare` | Track one player from the stands |
-| Simple Scorebook | `simplegame` | Two teams, no roster, just the score |
+| Team Stats | `teamstats`, `teamstatsgame`, `teamstatsshare` | Every player on one roster, two taps per stat, box score for the coach |
 | Training | `training`, `trainingrun`, `trainingresult`, `traininghistory` | Shooting drills with a tap-to-record court and shot charts |
-| Team Seasons | `teamseasons` | Archived scorebook games, records, player season averages |
+| Full Scorebook | `scoreboard`, `scoring`, `scorebook`, `teams`, `rules` | The official book — both teams, fouls, periods, box score |
+| Simple Scorebook | `simplegame` | Two teams, no roster, just the score |
+| Team Seasons | `teamseasons` | Every archived team game — scorebook and Team Stats — with records and player averages |
+
+**Team Stats is My Kid applied to a roster.** Same tap grid, same stat set
+(configurable, stored on the saved team so a season's averages compare), same
+event log, plus a strip of jersey numbers to pick who. The selection sticks, so
+repeat stats for one player are one tap. `hooks/teamStats.ts` is the pure
+bridge between the kid stat set and the scorebook's `PlayerStats`, in both
+directions: `playerStatsFromTotals` for archiving, `eventsFromPlayerStats` for
+sending a scorebook line into a My Kid profile.
+
+**One roster, everywhere.** Team Stats reads the same library the Full Scorebook
+saves to (`hardwoods_team_library`). There is deliberately no second place to
+maintain a team. Rosters are still *edited* in Team Setup (`teams.tsx`), which
+Team Stats links to.
+
+**Games flow into My Kid profiles from both team modes.** At end of game, any
+rostered player whose name matches a profile on the phone gets the game offered
+to their profile. From Team Stats that carries the full stat set; from the Full
+Scorebook only shooting and fouls exist, so rebounds/steals/assists are
+honestly absent rather than zero-filled. Matching is by trimmed, case-folded
+name — the same rule `kidTransfer.matchProfile` uses.
+
+**Players can be marked OUT for a night** (`Player.isOut`) without leaving the
+roster. Out players are skipped by the bench picker, the box score, and the
+archive, so their games-played count stays honest. The flag is per game and is
+never written to the team library.
 
 Plus `kidexport` / `kidimport` / `kidmanual` (game transfer between phones) and
 `statsguide` (plain-English stat definitions).
@@ -75,7 +104,15 @@ rules.
 
 **Storage lives in `use*.ts` hooks** over AsyncStorage, with versioned keys:
 `hardwoods_kids_v1`, `hardwoods_training_v1`, `hardwoods_team_games_v1`,
-`hardwoods_team_library`, plus `*_inprogress` keys for crash recovery.
+`hardwoods_team_library`, plus `*_inprogress` keys for crash recovery
+(`hardwoods_teamstats_inprogress` included).
+
+**Every store hook writes everything it holds.** `archiveGame`, `saveGame` and
+friends do `set(prev => [...])` and persist the result — so calling one before
+that hook has finished loading replaces the whole store with one entry. Screens
+that save at the *end* of a long session are fine in practice; anything that
+could save early must gate on the hook's `loading` flag (`teamstatsgame.tsx`
+does).
 
 **Event logs are the source of truth; totals are derived.** A game stores every
 tap with a timestamp. That's what makes undo work, makes per-set and per-step
@@ -213,16 +250,13 @@ the status bar. Sources live in `appstore/`, output in `appstore/marketing/`.
   copy-in behaviour of `NO` is both accurate and avoids needing security-scoped
   URL handling. Declaring `CFBundleDocumentTypes` without this key is a delivery
   warning and leaves the behaviour undefined.
-- **`scoring.tsx` has no portrait layout.** Deliberately deferred (agreed
-  2026-08-23). Full Scorebook's stat-entry screen splits 50/50 vertically in
-  portrait: roster crammed into the left half above dead space, TEAM T/O and
-  TECHNICAL stretched into full-height slabs on the right. The intended fix is
-  the same shape `simplegame.tsx` now uses — roster across the top, the selected
-  player's stat buttons across the bottom, picked off `useWindowDimensions`. It's
-  the screen used during a live game, so it wants its own build. The Full
-  Scorebook *hub* is fine in portrait and should be left alone; its admin bar is
-  not — seven buttons plus the period button shrink to near-unreadable, and wants
-  two rows.
+- ~~`scoring.tsx` has no portrait layout.~~ Done 2026-09-13: the hub stacks
+  Team A over Team B with a two-row admin bar, and the scoring screen puts the
+  roster above the action panel. All picked off `useWindowDimensions`;
+  landscape is unchanged.
+- **Team Seasons' player table is tight in portrait** once the RPG/APG/SPG
+  columns appear — names truncate to "Ava Mar…". Livable; a wider name column or
+  last-name-only would fix it.
 - **`useScreenOrientation` hooks are no-ops.** Orientation is handled by the
   Info.plist declarations plus per-screen layout. Fine in practice; means an
   iPad can show a landscape-designed screen in portrait.
@@ -246,6 +280,20 @@ ASCII-8BIT path string CocoaPods passes it, and `pod install` dies before it
 starts without them.
 
 To reach a screen directly, seed state into AsyncStorage and deep-link to it.
+Large values (the game archive, once it has a few games) are not inlined in
+`manifest.json` — RCTAsyncLocalStorage spills them to sibling files named by
+hash, so read the directory, not just the manifest.
+
+**If another Expo project's Metro is on 8081**, this debug build will load its
+bundle and show "Unmatched Route". The port is baked in at build time and
+`--port` on `expo run:ios` doesn't reach the compiled React-Core pod. The fix is
+the dev menu's backing store:
+
+```bash
+xcrun simctl spawn "$D" defaults write com.hardwoods.scoreboard RCT_jsLocation -string "localhost:8082"
+```
+
+then relaunch, with `npx expo start --port 8082` running here.
 
 ```bash
 D="iPhone 17 Pro Max"
