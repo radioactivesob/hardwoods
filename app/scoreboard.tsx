@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, Alert,
+  View, StyleSheet, TouchableOpacity, SafeAreaView, Alert, useWindowDimensions,
 } from 'react-native';
 import { Text } from '../components/AppText';
 import { useRouter } from 'expo-router';
@@ -8,11 +8,13 @@ import { useGame } from '../context/GameContext';
 import { useTeamGames, archivedGameFromState } from '../hooks/useTeamGames';
 import { useLandscapeOnly } from '../hooks/useScreenOrientation';
 
-const { width, height } = Dimensions.get('window');
-
 export default function Scoreboard() {
   useLandscapeOnly();
   const router = useRouter();
+  // Landscape is the designed-for layout; portrait stacks the team buttons
+  // and splits the admin bar in two so nothing has to shrink to fit.
+  const { width, height } = useWindowDimensions();
+  const portrait = height >= width;
   const { state, dispatch, undo, canUndo, totalScore } = useGame();
   const { archiveGame } = useTeamGames();
   const { teamA, teamB, currentPeriod, teamAFouls, teamBFouls, teamATimeoutsLeft, teamBTimeoutsLeft, rules } = state;
@@ -121,7 +123,7 @@ export default function Scoreboard() {
       </View>
 
       {/* Team Buttons */}
-      <View style={styles.teamButtons}>
+      <View style={[styles.teamButtons, portrait && styles.teamButtonsPortrait]}>
         <TouchableOpacity
           style={[styles.teamButton, { backgroundColor: teamA.color + '22', borderColor: teamA.color }]}
           onPress={() => router.push({ pathname: '/scoring', params: { team: 'A' } })}
@@ -132,7 +134,7 @@ export default function Scoreboard() {
           <Text style={[styles.teamButtonHint, { color: teamA.color + 'AA' }]}>TAP TO SCORE</Text>
         </TouchableOpacity>
 
-        <View style={styles.teamButtonDivider}>
+        <View style={portrait ? styles.teamButtonDividerPortrait : styles.teamButtonDivider}>
           <Text style={styles.vsText}>VS</Text>
         </View>
 
@@ -148,7 +150,8 @@ export default function Scoreboard() {
       </View>
 
       {/* Admin Bar */}
-      <View style={styles.adminBar}>
+      <View style={[styles.adminBar, portrait && styles.adminBarPortrait]}>
+        <View style={[styles.adminRow, portrait && styles.adminRowPortrait]}>
         <TouchableOpacity style={styles.adminButton} onPress={() => router.push('/rules')}>
           <Text style={styles.adminButtonText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>⚙ RULES</Text>
         </TouchableOpacity>
@@ -161,6 +164,8 @@ export default function Scoreboard() {
         <TouchableOpacity style={styles.adminButton} onPress={() => router.replace('/')}>
           <Text style={styles.adminButtonText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>⌂ HOME</Text>
         </TouchableOpacity>
+        </View>
+        <View style={[styles.adminRow, portrait && styles.adminRowPortrait]}>
         <TouchableOpacity
           style={[styles.adminButton, !canUndo && styles.adminButtonDisabled]}
           onPress={canUndo ? undo : undefined}
@@ -183,6 +188,7 @@ export default function Scoreboard() {
           <TouchableOpacity style={styles.nextPeriodButton} onPress={confirmNextPeriod}>
             <Text style={styles.nextPeriodText}>{nextPeriodLabel} →</Text>
           </TouchableOpacity>
+        </View>
         </View>
       </View>
     </SafeAreaView>
@@ -302,8 +308,16 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
+  teamButtonsPortrait: {
+    flexDirection: 'column',
+  },
   teamButtonDivider: {
     width: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  teamButtonDividerPortrait: {
+    height: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -333,6 +347,7 @@ const styles = StyleSheet.create({
   },
 
   // Admin Bar
+  // Two groups of buttons: one row in landscape, stacked in portrait.
   adminBar: {
     flexDirection: 'row',
     backgroundColor: '#0D0700',
@@ -342,6 +357,20 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     alignItems: 'center',
     gap: 6,
+  },
+  adminBarPortrait: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+  },
+  adminRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  adminRowPortrait: {
+    flex: 0,
+    marginBottom: 6,
   },
   adminButton: {
     flex: 1,

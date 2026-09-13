@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { Text } from '../components/AppText';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -17,6 +18,10 @@ type ScoringStep =
 export default function ScoringPanel() {
   useLandscapeOnly();
   const router = useRouter();
+  // Portrait stacks the roster over the action panel instead of squeezing
+  // both into half-width columns.
+  const { width, height } = useWindowDimensions();
+  const portrait = height >= width;
   const { team } = useLocalSearchParams<{ team: 'A' | 'B' }>();
   const { state, dispatch, activePlayers, benchPlayers } = useGame();
 
@@ -180,7 +185,7 @@ export default function ScoringPanel() {
     if (step.kind === 'action') {
       const p = step.player;
       return (
-        <View style={styles.actionPanel}>
+        <View style={[styles.actionPanel, portrait && styles.actionPanelPortrait]}>
           <Text style={[styles.actionTitle, { color: teamColor }]}>#{p.number} {p.name}</Text>
 
           <View style={styles.actionRow}>
@@ -233,7 +238,7 @@ export default function ScoringPanel() {
     if (step.kind === 'foul_shots') {
       const { player: p, shotCount, shotIndex } = step;
       return (
-        <View style={styles.actionPanel}>
+        <View style={[styles.actionPanel, portrait && styles.actionPanelPortrait]}>
           <Text style={[styles.actionTitle, { color: teamColor }]}>#{p.number} FREE THROWS</Text>
           <Text style={styles.foulShotProgress}>Shot {shotIndex + 1} of {shotCount}</Text>
           <View style={styles.foulShotRow}>
@@ -253,7 +258,7 @@ export default function ScoringPanel() {
 
     if (step.kind === 'bench_in') {
       return (
-        <View style={styles.actionPanel}>
+        <View style={[styles.actionPanel, portrait && styles.actionPanelPortrait]}>
           <Text style={[styles.actionTitle, { color: teamColor }]}>
             SUB IN: #{step.inPlayer.number}
           </Text>
@@ -267,7 +272,7 @@ export default function ScoringPanel() {
 
     if (step.kind === 'technical_select') {
       return (
-        <View style={styles.actionPanel}>
+        <View style={[styles.actionPanel, portrait && styles.actionPanelPortrait]}>
           <Text style={[styles.actionTitle, { color: '#CC7700' }]}>TECHNICAL</Text>
           <Text style={styles.subInstructions}>Tap the player{'\n'}who received the technical</Text>
           <TouchableOpacity style={styles.cancelBtn} onPress={() => setStep({ kind: 'player_select' })}>
@@ -279,20 +284,22 @@ export default function ScoringPanel() {
 
     // Default: team controls
     return (
-      <View style={styles.actionPanel}>
-        <Text style={styles.actionPanelHint}>Select a player{'\n'}to score</Text>
-        <TouchableOpacity style={[styles.actionBtn, styles.actionBtnYellow, { marginTop: 12 }]} onPress={() => handleTeamAction('timeout')}>
-          <Text style={[styles.actionBtnText, { color: '#000' }]}>TEAM T/O</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionBtn, styles.actionBtnRed, { marginTop: 8 }]} onPress={() => handleTeamAction('technical')}>
-          <Text style={styles.actionBtnText}>TECHNICAL</Text>
-        </TouchableOpacity>
+      <View style={[styles.actionPanel, portrait && styles.actionPanelPortrait]}>
+        <Text style={styles.actionPanelHint}>{portrait ? 'Select a player to score' : 'Select a player\nto score'}</Text>
+        <View style={portrait ? styles.actionRow : undefined}>
+          <TouchableOpacity style={[styles.actionBtn, styles.actionBtnYellow, { marginTop: 12 }]} onPress={() => handleTeamAction('timeout')}>
+            <Text style={[styles.actionBtnText, { color: '#000' }]}>TEAM T/O</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionBtn, styles.actionBtnRed, { marginTop: portrait ? 12 : 8 }]} onPress={() => handleTeamAction('technical')}>
+            <Text style={styles.actionBtnText}>TECHNICAL</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
 
   const teamSide = (
-    <View style={[styles.teamSide, { borderColor: teamColor + '44' }]}>
+    <View style={[styles.teamSide, portrait && styles.teamSidePortrait, { borderColor: teamColor + '44' }]}>
       <View style={[styles.teamSideHeader, { backgroundColor: teamColor + '22' }]}>
         <Text style={[styles.teamSideName, { color: teamColor }]}>{teamData.name}</Text>
         <TouchableOpacity
@@ -350,7 +357,7 @@ export default function ScoringPanel() {
   );
 
   const actionSide = (
-    <View style={styles.actionSide}>
+    <View style={[styles.actionSide, portrait && styles.actionSidePortrait]}>
       {renderActionPanel()}
     </View>
   );
@@ -366,8 +373,8 @@ export default function ScoringPanel() {
         <View style={{ width: 60 }} />
       </View>
 
-      <View style={styles.content}>
-        {isLeft ? (
+      <View style={[styles.content, portrait && styles.contentPortrait]}>
+        {portrait || isLeft ? (
           <>
             {teamSide}
             {actionSide}
@@ -417,12 +424,18 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
   },
+  contentPortrait: {
+    flexDirection: 'column',
+  },
 
   // Team Side
   teamSide: {
     flex: 1,
     borderRightWidth: 1,
     padding: 8,
+  },
+  teamSidePortrait: {
+    borderRightWidth: 0,
   },
   teamSideHeader: {
     flexDirection: 'row',
@@ -517,9 +530,18 @@ const styles = StyleSheet.create({
     borderLeftColor: '#2A1A00',
     padding: 12,
   },
+  actionSidePortrait: {
+    width: '100%',
+    borderLeftWidth: 0,
+    borderTopWidth: 1,
+    borderTopColor: '#2A1A00',
+  },
   actionPanel: {
     flex: 1,
     justifyContent: 'center',
+  },
+  actionPanelPortrait: {
+    flex: 0,
   },
   actionTitle: {
     fontSize: 14,
