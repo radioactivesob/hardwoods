@@ -7,7 +7,7 @@ export interface Player {
   isStarting: boolean;
   isActive: boolean;
   /**
-   * Not dressed tonight. Stays on the roster so nobody has to re-add her next
+   * Not dressed tonight. Stays on the roster so nobody has to re-add them next
    * week, but never appears on the bench picker or in this game's box score.
    * Per game, never saved to the team library.
    */

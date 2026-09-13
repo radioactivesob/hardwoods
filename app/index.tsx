@@ -11,8 +11,8 @@ import { useAllOrientations } from '../hooks/useScreenOrientation';
 const MODES: { path: string; icon: string; title: string; desc: string }[] = [
   { path: '/mykid', icon: '⭐', title: 'MY KID',
     desc: 'Track your kid from the stands and watch their season take shape.' },
-  { path: '/teamstats', icon: '👧', title: 'TEAM STATS',
-    desc: 'Every girl on the roster, one tap per stat — no opponent, no book.' },
+  { path: '/teamstats', icon: '📊', title: 'TEAM STATS',
+    desc: 'Every player on your roster, one tap per stat — no opponent, no book.' },
   { path: '/training', icon: '🎯', title: 'TRAINING',
     desc: 'Run shooting drills, chart every shot, and watch the percentages climb.' },
   { path: '/scoreboard', icon: '📋', title: 'FULL SCOREBOOK',

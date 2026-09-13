@@ -14,12 +14,13 @@ interface Props {
   onSubmit: (score: { us: number; them: number } | null) => void;
   skipLabel?: string; // omit to hide the skip path (backfill mode uses cancel instead)
   onCancel?: () => void;
+  hint?: string; // defaults to the My Kid "optional" wording
 }
 
 // Optional final-score entry. Kept deliberately tiny: two number
 // fields, one tap to skip — the minimal-setup principle applies to
 // endings too.
-export default function ScorePrompt({ visible, accent, initial, onSubmit, skipLabel, onCancel }: Props) {
+export default function ScorePrompt({ visible, accent, initial, onSubmit, skipLabel, onCancel, hint }: Props) {
   const [us, setUs] = useState('');
   const [them, setThem] = useState('');
 
@@ -48,7 +49,7 @@ export default function ScorePrompt({ visible, accent, initial, onSubmit, skipLa
       <View style={styles.overlay}>
         <View style={[styles.modal, { borderColor: accent }]}>
           <Text style={styles.title}>FINAL TEAM SCORE</Text>
-          <Text style={styles.hint}>Optional — adds game context to stats and share cards.</Text>
+          <Text style={styles.hint}>{hint ?? 'Optional — adds game context to stats and share cards.'}</Text>
 
           <View style={styles.scoreRow}>
             <View style={styles.scoreCol}>

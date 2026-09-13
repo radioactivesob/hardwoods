@@ -98,8 +98,8 @@ export default function TeamSetup() {
     updatePlayer(id, 'isStarting', !player.isStarting);
   };
 
-  // "Out" is for the night, not the roster — she keeps her spot. Going out
-  // drops her from the starting five so the count stays honest.
+  // "Out" is for the night, not the roster — the player keeps their spot.
+  // Going out drops them from the starting five so the count stays honest.
   const toggleOut = (id: string) => {
     setTeam(prev => ({
       ...prev,

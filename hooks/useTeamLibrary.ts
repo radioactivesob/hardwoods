@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TeamConfig, Player } from '../context/GameContext';
+import type { StatKey } from './kidStats';
 
 const STORAGE_KEY = 'hardwoods_team_library';
 
@@ -11,6 +12,8 @@ export interface SavedTeam {
   color: string;
   coachName: string;
   players: Pick<Player, 'name' | 'number' | 'isStarting'>[];
+  /** Team Stats tap grid. Absent = My Kid defaults. Keep it stable across a season. */
+  enabledStats?: StatKey[];
 }
 
 function teamToSaved(team: TeamConfig): Omit<SavedTeam, 'id' | 'savedAt'> {
@@ -62,6 +65,9 @@ export function useTeamLibrary() {
     };
     // Replace existing entry with same name, otherwise prepend
     setLibrary(prev => {
+      const existing = prev.find(t => t.name.toLowerCase() === team.name.toLowerCase());
+      // Re-saving a roster from the scorebook must not wipe the Team Stats config.
+      if (existing?.enabledStats) entry.enabledStats = existing.enabledStats;
       const filtered = prev.filter(t => t.name.toLowerCase() !== team.name.toLowerCase());
       const next = [entry, ...filtered];
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
@@ -77,5 +83,19 @@ export function useTeamLibrary() {
     });
   }, []);
 
-  return { library, loading, saveTeam, deleteTeam };
+  const setTeamStats = useCallback((id: string, enabledStats: StatKey[]) => {
+    setLibrary(prev => {
+      const next = prev.map(t => (t.id === id ? { ...t, enabledStats } : t));
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const reload = useCallback(() => {
+    AsyncStorage.getItem(STORAGE_KEY).then(raw => {
+      if (raw) setLibrary(JSON.parse(raw));
+    });
+  }, []);
+
+  return { library, loading, saveTeam, deleteTeam, setTeamStats, reload };
 }

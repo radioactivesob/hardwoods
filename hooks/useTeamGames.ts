@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GameState, PlayerStats, PeriodScore } from '../context/GameContext';
+import type { StatKey, StatEvent } from './kidStats';
 
 const STORAGE_KEY = 'hardwoods_team_games_v1';
 
@@ -11,6 +12,13 @@ export interface ArchivedPlayer {
   name: string;
   number: string;
   stats: PlayerStats;
+  /**
+   * Team Stats mode records the fuller My Kid stat set (rebounds, steals,
+   * assists…) and keeps the tap log. The scorebook only knows shooting and
+   * fouls, so games from there leave these absent.
+   */
+  totals?: Record<StatKey, number>;
+  events?: StatEvent[];
 }
 
 export interface ArchivedTeam {
@@ -22,6 +30,8 @@ export interface ArchivedTeam {
 export interface ArchivedGame {
   id: string;
   date: number;
+  /** Absent on games archived before Team Stats existed — they're all scorebook. */
+  source?: 'scorebook' | 'teamstats';
   teamA: ArchivedTeam;
   teamB: ArchivedTeam;
   periodScores: PeriodScore[];
@@ -91,6 +101,9 @@ export function useTeamGames() {
         { t: g.teamB, mine: g.finalB, theirs: g.finalA },
       ].forEach(({ t, mine, theirs }) => {
         if (!t.name.trim()) return;
+        // A Team Stats opponent is only a name and a score — not a team
+        // anyone tracked, so it doesn't get its own season page.
+        if (g.source === 'teamstats' && t.players.length === 0) return;
         const key = t.name.trim().toLowerCase();
         const entry = map.get(key) ?? { name: t.name.trim(), color: t.color, wins: 0, losses: 0, ties: 0, games: 0 };
         entry.games += 1;

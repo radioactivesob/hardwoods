@@ -20,6 +20,12 @@ interface PlayerAgg {
   fgMade: number;
   fgAttempted: number;
   fouls: number;
+  // Only Team Stats games carry these; scorebook games contribute nothing.
+  rebounds: number;
+  assists: number;
+  steals: number;
+  /** Games where the fuller stat set was tracked — the divisor for RPG/APG/SPG. */
+  gpFull: number;
 }
 
 export default function TeamSeasons() {
@@ -86,16 +92,27 @@ export default function TeamSeasons() {
     rows.forEach(r => {
       r.us.players.forEach((p: ArchivedPlayer) => {
         const key = `${p.number}|${p.name.toLowerCase()}`;
-        const a = aggMap.get(key) ?? { key, name: p.name, number: p.number, gp: 0, points: 0, fgMade: 0, fgAttempted: 0, fouls: 0 };
+        const a = aggMap.get(key) ?? {
+          key, name: p.name, number: p.number, gp: 0, points: 0, fgMade: 0, fgAttempted: 0, fouls: 0,
+          rebounds: 0, assists: 0, steals: 0, gpFull: 0,
+        };
         a.gp += 1;
         a.points += p.stats.points;
         a.fgMade += p.stats.fgMade;
         a.fgAttempted += p.stats.fgAttempted;
         a.fouls += p.stats.fouls;
+        if (p.totals) {
+          a.gpFull += 1;
+          a.rebounds += p.totals.rebound ?? 0;
+          a.assists += p.totals.assist ?? 0;
+          a.steals += p.totals.steal ?? 0;
+        }
         aggMap.set(key, a);
       });
     });
     const players = Array.from(aggMap.values()).sort((a, b) => b.points - a.points);
+    const hasFull = players.some(p => p.gpFull > 0);
+    const per = (n: number, gp: number) => (gp > 0 ? (n / gp).toFixed(1) : '—');
 
     body = (
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -158,6 +175,10 @@ export default function TeamSeasons() {
             <TouchableOpacity
               key={r.game.id}
               style={styles.gameRow}
+              // Team Stats games keep their box score; reopen it to share again.
+              onPress={r.game.source === 'teamstats'
+                ? () => router.push({ pathname: '/teamstatsshare', params: { gameId: r.game.id } })
+                : undefined}
               onLongPress={() => {
                 Alert.alert('Delete Game?', `${formatDate(r.game.date)} vs. ${r.them.name || 'opponent'}. This cannot be undone.`, [
                   { text: 'Cancel', style: 'cancel' },
@@ -171,7 +192,9 @@ export default function TeamSeasons() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.gameTitle}>{formatDate(r.game.date)} · vs. {r.them.name || 'Opponent'}</Text>
-                <Text style={styles.gameMeta}>{r.usScore} — {r.themScore}</Text>
+                <Text style={styles.gameMeta}>
+                  {r.usScore} — {r.themScore}{r.game.source === 'teamstats' ? '  ·  box score ›' : ''}
+                </Text>
               </View>
             </TouchableOpacity>
           );
@@ -186,6 +209,9 @@ export default function TeamSeasons() {
               <Text style={[styles.cell, styles.headerCell]}>GP</Text>
               <Text style={[styles.cell, styles.headerCell]}>PPG</Text>
               <Text style={[styles.cell, styles.headerCell]}>FG%</Text>
+              {hasFull && <Text style={[styles.cell, styles.headerCell]}>RPG</Text>}
+              {hasFull && <Text style={[styles.cell, styles.headerCell]}>APG</Text>}
+              {hasFull && <Text style={[styles.cell, styles.headerCell]}>SPG</Text>}
               <Text style={[styles.cell, styles.headerCell]}>PF/G</Text>
             </View>
             {players.map(p => (
@@ -196,6 +222,9 @@ export default function TeamSeasons() {
                 <Text style={styles.cell}>{p.gp}</Text>
                 <Text style={styles.cell}>{(p.points / p.gp).toFixed(1)}</Text>
                 <Text style={styles.cell}>{p.fgAttempted > 0 ? `${Math.round((p.fgMade / p.fgAttempted) * 100)}%` : '—'}</Text>
+                {hasFull && <Text style={styles.cell}>{per(p.rebounds, p.gpFull)}</Text>}
+                {hasFull && <Text style={styles.cell}>{per(p.assists, p.gpFull)}</Text>}
+                {hasFull && <Text style={styles.cell}>{per(p.steals, p.gpFull)}</Text>}
                 <Text style={styles.cell}>{(p.fouls / p.gp).toFixed(1)}</Text>
               </View>
             ))}
