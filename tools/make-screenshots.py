@@ -116,7 +116,7 @@ IPAD_SRC = os.path.join(SRC, "ipad")
 IPAD_FRAMES = [
     ("Watch them improve",    "Game-by-game trends, all season long",
      ["02-kidseason.png"],   "01-season.png"),
-    ("Five ways to use it",   "Pick the one that fits your night",
+    ("Six ways to use it",    "Pick the one that fits your night",
      ["01-landing.png"],     "02-modes.png"),
     ("See how you stack up",  "Every archived game, by team",
      ["03-teamseasons.png"], "03-teams.png"),
@@ -125,22 +125,26 @@ IPAD_FRAMES = [
 ]
 
 FRAMES = [
-    ("Chart every shot",      "Shooting drills with a tap-to-record court",
-     ["11-trainingresult.png"],                              "01-training.png"),
-    ("Watch them improve",    "Game-by-game trends, all season long",
-     ["07-kidseason.png"],                                   "02-season.png"),
-    ("Run the official book", "Rosters, fouls, periods, box scores",
-     ["02-scoreboard.png", "03-scoring.png", "04-scorebook.png"], "03-book.png"),
     ("Track your kid",        "From the stands, one tap at a time",
-     ["06-kidgame.png"],                                     "04-track.png"),
+     ["06-kidgame.png"],                                     "01-track.png"),
+    ("Track the whole team",  "Every player on the roster, two taps per stat",
+     ["13-teamstats.png"],                                   "02-team.png"),
+    ("Watch them improve",    "Game-by-game trends, all season long",
+     ["07-kidseason.png"],                                   "03-season.png"),
+    ("Box score in a tap",    "Text it to the coach before the bus leaves",
+     ["14-teamstatsshare.png"],                              "04-boxscore.png"),
+    ("Chart every shot",      "Shooting drills with a tap-to-record court",
+     ["11-trainingresult.png"],                              "05-training.png"),
     ("Send it to the family", "Stat cards you can text in a tap",
-     ["08-sharecard.png"],                                   "05-share.png"),
-    ("Just need the score?",  "Two teams, no roster, no setup",
-     ["10-simplegame.png"],                                  "06-simple.png"),
-    ("Five ways to use it",   "Pick the one that fits your night",
-     ["01-landing.png"],                                     "07-modes.png"),
+     ["08-sharecard.png"],                                   "06-share.png"),
+    ("Run the official book", "Rosters, fouls, periods, box scores",
+     ["02-scoreboard.png", "03-scoring.png", "04-scorebook.png"], "07-book.png"),
+    ("Six ways to use it",    "Pick the one that fits your night",
+     ["01-landing.png"],                                     "08-modes.png"),
     ("Practice adds up",      "Every session, every zone, all season",
-     ["12-traininghistory.png"],                             "08-history.png"),
+     ["12-traininghistory.png"],                             "09-history.png"),
+    ("Just need the score?",  "Two teams, no roster, no setup",
+     ["10-simplegame.png"],                                  "10-simple.png"),
 ]
 
 print("iPhone frames:")

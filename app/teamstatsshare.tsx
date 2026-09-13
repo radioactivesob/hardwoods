@@ -10,6 +10,14 @@ import { useTeamGames, ArchivedPlayer } from '../hooks/useTeamGames';
 import { StatKey } from '../hooks/kidStats';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
+// Rosters carry full names, but the card has seven stat columns to fit —
+// "Tessa B." reads better than "Tessa B…" cut off by the ellipsis.
+function shortName(name: string) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name.trim();
+  return `${parts[0]} ${parts[parts.length - 1].charAt(0).toUpperCase()}.`;
+}
+
 function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
@@ -113,7 +121,7 @@ export default function TeamStatsShare() {
           {players.map((p, i) => (
             <View key={`${p.number}-${p.name}-${i}`} style={[styles.tableRow, i % 2 === 1 && styles.tableRowAlt]}>
               <Text style={[styles.cell, styles.cellName]} numberOfLines={1}>
-                {p.number ? <Text style={{ color }}>#{p.number} </Text> : null}{p.name}
+                {p.number ? <Text style={{ color }}>#{p.number} </Text> : null}{shortName(p.name)}
               </Text>
               <Text style={[styles.cell, styles.cellPts, styles.cellStrong]}>{p.stats.points}</Text>
               {columns.map(c => (
