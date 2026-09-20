@@ -40,7 +40,7 @@ official book is the extra.
 | Mode | Screens | What it is |
 |---|---|---|
 | My Kid | `mykid`, `kidgame`, `kidseason`, `kidshare` | Track one player from the stands |
-| Team Stats | `teamstats`, `teamstatsgame`, `teamstatsshare` | Every player on one roster, two taps per stat, box score for the coach |
+| Team Stats | `teamstats`, `teamroster`, `teamstatsgame`, `teamstatsshare`, `teamstatsedit`, `teamimport` | Every player on one roster, two taps per stat, box score for the coach |
 | Training | `training`, `trainingrun`, `trainingresult`, `traininghistory` | Shooting drills with a tap-to-record court and shot charts |
 | Full Scorebook | `scoreboard`, `scoring`, `scorebook`, `teams`, `rules` | The official book — both teams, fouls, periods, box score |
 | Simple Scorebook | `simplegame` | Two teams, no roster, just the score |
@@ -54,10 +54,30 @@ bridge between the kid stat set and the scorebook's `PlayerStats`, in both
 directions: `playerStatsFromTotals` for archiving, `eventsFromPlayerStats` for
 sending a scorebook line into a My Kid profile.
 
-**One roster, everywhere.** Team Stats reads the same library the Full Scorebook
-saves to (`hardwoods_team_library`). There is deliberately no second place to
-maintain a team. Rosters are still *edited* in Team Setup (`teams.tsx`), which
-Team Stats links to.
+**One roster, everywhere — and Team Stats owns editing it.** Both modes read
+`hardwoods_team_library`; there is deliberately no second place to maintain a
+team. Team Stats edits the saved team *directly* (`teamroster.tsx`, saving on
+every keystroke) and has a + NEW TEAM path that never touches the scorebook.
+The scorebook's Team Setup (`teams.tsx`) still works and still saves to the same
+library, but it has a separate working copy and an explicit save step — the
+step Cynthia forgot at a real game, which is why Team Stats no longer sends
+anyone there. The game strip has an ADD chip for a girl who turns up
+unannounced: adds her to the saved team and selects her.
+
+**Strip and box score are in jersey order** (`byJersey` — numeric, unparseable
+last, stable on ties). This replaced "reorder via the lineup" after the first
+weekend; the FAQ was updated to match. Players marked OUT come off the strip
+entirely and live behind a trailing OUT chip.
+
+**Foul trouble tints the chip** (amber at 3, red at 4, greyed on 5 — `foulState`,
+assuming the five-foul limit since Team Stats has no rules screen) and shooting
+tiles show "4/9 · 44%" for the selected player. Both are read-only glances the
+totals already support; neither adds a tap.
+
+**Archived Team Stats games are editable** (`teamstatsedit.tsx`): adjust a count,
+or move a whole line to the player it should have been under. Lines are rebuilt
+from totals on every edit so `stats`, `totals` and `events` never disagree.
+Scorebook games aren't editable there — they have their own ✎ EDIT in the book.
 
 **Games flow into My Kid profiles from both team modes.** At end of game, any
 rostered player whose name matches a profile on the phone gets the game offered
@@ -140,13 +160,25 @@ before being understood.
 
 **File formats are versioned from day one**, because they get shared between
 devices and across app versions: `hardwoods.drill.v1` (coach-provided drills),
-`hardwoods.kidgames.v1` (game transfer). Parse strictly and return readable
-errors — a bad file should never produce a half-merged season.
+`hardwoods.kidgames.v1` (My Kid game transfer), `hardwoods.teamgame.v1` (a Team
+Stats game — `hooks/teamTransfer.ts`). Parse strictly and return readable errors
+— a bad file should never produce a half-merged season. **All of them share the
+`.hardwoods` extension**, so iOS hands every file to `kidimport.tsx`, which
+reads it once and routes on `format` — a team game goes to `teamimport.tsx` with
+the JSON as a param. Add a fourth format there, not in `_layout.tsx`.
+
+**A team game arriving offers each player's line to her profile**, using the
+same `findProfileForPlayer` matching a live game uses, with the kid-side entry
+id derived from `fingerprintGame` so it collides with a `kidgames` file of the
+same game. That's the path by which one parent tracking the team feeds a kid's
+season on another phone.
 
 **Anything crossing devices needs content-derived ids.** Local ids are
-`Date.now()` and differ per phone. Transfer fingerprints games by hashing
-(player, date, opponent, event log), which is what makes re-importing the same
-file a no-op.
+`Date.now()` and differ per phone. Kid transfer fingerprints games by hashing
+(player, date, opponent, event log); team transfer hashes (team, date, every
+line's event log) and **deliberately leaves out the opponent and score**, since
+both get corrected after the fact and a fixed-up game re-sent should still
+dedup. The timestamped tap log is identity enough.
 
 **Never read a value assigned inside a `setState` updater.** React runs the
 updater later, so the outer function returns before it fires. `importGames`
