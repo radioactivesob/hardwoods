@@ -6,7 +6,9 @@ daughter's club team. Live on the App Store. Sibling app:
 architecture, deliberately different sport and palette).
 
 Read this before changing anything. Most of what follows was learned by getting
-it wrong at an actual gym.
+it wrong at an actual gym. `ROADMAP.md` says where the app is going and why —
+the short version is that Hardwoods is a **Growth Engine** joining game stats
+to training drills, and the scorebooks are the extras.
 
 ---
 
