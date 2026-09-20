@@ -11,7 +11,7 @@ import { buildTransfer, suggestFileName } from '../hooks/kidTransfer';
 import { useKidStats } from '../hooks/useKidStats';
 import {
   STAT_DEFS, GameEntry, pointsFromTotals, shootingLine, kidColor,
-  profileSeason, gameSeason, gameResult,
+  profileSeason, gameSeason, gameResult, playingTime, formatClock,
 } from '../hooks/kidStats';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
@@ -62,6 +62,16 @@ export default function KidShare() {
       { label: 'ASSISTS', value: game.totals.assist ? `${game.totals.assist}` : '' },
       { label: 'BLOCKS', value: game.totals.block ? `${game.totals.block}` : '' },
       { label: 'FOULS', value: game.totals.foul ? `${game.totals.foul}` : '' },
+      {
+        label: 'ON THE FLOOR',
+        value: (() => {
+          const pt = playingTime(game);
+          if (!pt) return '';
+          return pt.share !== null
+            ? `${Math.round(pt.share * 100)}% · ${formatClock(pt.sec)}`
+            : formatClock(pt.sec);
+        })(),
+      },
     ].filter(r => r.value !== '');
   } else {
     const totalPoints = games.reduce((s, g) => s + pointsFromTotals(g.totals), 0);

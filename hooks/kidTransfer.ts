@@ -9,7 +9,7 @@
 // sends it. Pure module: no React, no storage, no I/O.
 
 import {
-  KidProfile, GameEntry, StatEvent, StatKey, emptyTotals, totalsFromEvents,
+  KidProfile, GameEntry, FloorStint, StatEvent, StatKey, emptyTotals, totalsFromEvents,
 } from './kidStats';
 
 export const TRANSFER_FORMAT = 'hardwoods.kidgames.v1';
@@ -22,6 +22,9 @@ export interface TransferGame {
   teamScore?: { us: number; them: number };
   events: StatEvent[];
   totals: Record<StatKey, number>;
+  /** Playing time travels too; older apps simply ignore the fields. */
+  floor?: FloorStint[];
+  durationSec?: number;
 }
 
 /** The player block travels so both phones can track the same stat set. */
@@ -93,6 +96,8 @@ export function buildTransfer(
       teamScore: g.teamScore,
       events: g.events.map(e => ({ ...e })),
       totals: { ...g.totals },
+      floor: g.floor?.map(st => ({ ...st })),
+      durationSec: g.durationSec,
     })),
   };
 }
@@ -148,6 +153,10 @@ export function parseTransfer(raw: unknown): TransferParse {
         teamScore: g.teamScore,
         events: g.events,
         totals: g.totals ?? totalsFromEvents(g.events),
+        floor: Array.isArray(g.floor)
+          ? g.floor.filter(st => st && typeof st.in === 'number' && (st.out === undefined || typeof st.out === 'number'))
+          : undefined,
+        durationSec: typeof g.durationSec === 'number' && g.durationSec > 0 ? g.durationSec : undefined,
       })),
     },
   };
@@ -212,6 +221,8 @@ export function toGameEntry(
     teamScore: g.teamScore,
     events: g.events,
     totals: g.totals ?? emptyTotals(),
+    floor: g.floor && g.floor.length > 0 ? g.floor : undefined,
+    durationSec: g.floor && g.floor.length > 0 ? g.durationSec : undefined,
   };
 }
 

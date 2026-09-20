@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert,
 } from 'react-native';
@@ -14,13 +14,23 @@ import { useAllOrientations } from '../hooks/useScreenOrientation';
 // In-progress game survives app restarts — a parent at a real game
 // can't afford to lose 3 quarters of taps to a dead battery moment.
 import { IN_PROGRESS_KEY } from '../hooks/useKidStats';
+import { FloorStint, floorSeconds, formatClock } from '../hooks/kidStats';
 
 interface InProgressGame {
   kidId: string;
   opponent: string;
   startedAt: number;
   events: StatEvent[];
+  /** Playing-time stints; the last one is open while she's on the floor. */
+  floor?: FloorStint[];
+  /** Wall time the game spent paused (screen left), so it doesn't count. */
+  pausedSec?: number;
+  /** Written on every persist and by a heartbeat while she's on the floor,
+   *  so a crash mid-stint can still be closed at roughly the right moment. */
+  lastSeen?: number;
 }
+
+const HEARTBEAT_MS = 20000;
 
 export default function KidGame() {
   useAllOrientations();
@@ -37,25 +47,91 @@ export default function KidGame() {
   const [startedAt, setStartedAt] = useState(Date.now());
   const [restored, setRestored] = useState(false);
   const [showScorePrompt, setShowScorePrompt] = useState(false);
+  const [floor, setFloor] = useState<FloorStint[]>([]);
+  const [pausedSec, setPausedSec] = useState(0);
+  const [tick, setTick] = useState(0); // re-render for the running clock
+
+  const onFloor = floor.length > 0 && floor[floor.length - 1].out === undefined;
 
   useEffect(() => {
     AsyncStorage.getItem(IN_PROGRESS_KEY).then(raw => {
       if (raw) {
         const saved: InProgressGame = JSON.parse(raw);
-        if (saved.kidId === kidId && saved.events.length > 0) {
+        // A game with a floor stint but no taps yet is still a game in
+        // progress — she can be on the floor before her first stat.
+        if (saved.kidId === kidId && (saved.events.length > 0 || (saved.floor?.length ?? 0) > 0)) {
           setEvents(saved.events);
           setOpponent(saved.opponent);
           setStartedAt(saved.startedAt);
+          // Time away (pause, or a crash) doesn't count toward the game, and
+          // an open stint is closed at the last moment we know she was on.
+          const now = Date.now();
+          const seen = saved.lastSeen ?? now;
+          setPausedSec((saved.pausedSec ?? 0) + Math.max(0, (now - seen) / 1000));
+          const stints = saved.floor ?? [];
+          const last = stints[stints.length - 1];
+          if (last && last.out === undefined) {
+            // She was on when we left; close that stint at lastSeen and open
+            // a fresh one now, so the gap is neither played nor lost.
+            setFloor([...stints.slice(0, -1), { ...last, out: Math.max(last.in, seen) }, { in: now }]);
+          } else {
+            setFloor(stints);
+          }
         }
       }
       setRestored(true);
     });
   }, [kidId]);
 
-  const persist = useCallback((next: StatEvent[], opp: string) => {
-    const snapshot: InProgressGame = { kidId: kidId!, opponent: opp, startedAt, events: next };
+  const persist = useCallback((next: StatEvent[], opp: string, stints: FloorStint[] = floor, paused = pausedSec) => {
+    const snapshot: InProgressGame = {
+      kidId: kidId!, opponent: opp, startedAt, events: next,
+      floor: stints, pausedSec: paused, lastSeen: Date.now(),
+    };
     AsyncStorage.setItem(IN_PROGRESS_KEY, JSON.stringify(snapshot));
-  }, [kidId, startedAt]);
+  }, [kidId, startedAt, floor, pausedSec]);
+
+  // While she's on the floor: tick the clock every second and refresh
+  // lastSeen every HEARTBEAT_MS so a dead battery loses at most 20s.
+  useEffect(() => {
+    if (!onFloor || !restored) return;
+    const clock = setInterval(() => setTick(t => t + 1), 1000);
+    const beat = setInterval(() => persist(events, opponent), HEARTBEAT_MS);
+    return () => { clearInterval(clock); clearInterval(beat); };
+  }, [onFloor, restored, persist, events, opponent]);
+
+  // Leaving the screen (PAUSE) stamps lastSeen, which is what the restore
+  // path uses to stop the clock for the time away. Read through a ref so
+  // the unmount cleanup sees the latest taps, not the ones from mount —
+  // persisting a stale snapshot here would silently drop stats.
+  const latest = useRef({ events, opponent, floor, pausedSec });
+  latest.current = { events, opponent, floor, pausedSec };
+  // Set once the game is saved or discarded, so the cleanup below doesn't
+  // resurrect it as in-progress on the way out.
+  const finished = useRef(false);
+  useEffect(() => {
+    if (!restored) return;
+    return () => {
+      if (finished.current) return;
+      const l = latest.current;
+      const snapshot: InProgressGame = {
+        kidId: kidId!, opponent: l.opponent, startedAt, events: l.events,
+        floor: l.floor, pausedSec: l.pausedSec, lastSeen: Date.now(),
+      };
+      // Nothing to keep if the parent never tapped anything or used the toggle.
+      if (l.events.length === 0 && l.floor.length === 0) return;
+      AsyncStorage.setItem(IN_PROGRESS_KEY, JSON.stringify(snapshot));
+    };
+  }, [restored, kidId, startedAt]);
+
+  const toggleFloor = () => {
+    const now = Date.now();
+    const next = onFloor
+      ? [...floor.slice(0, -1), { ...floor[floor.length - 1], out: now }]
+      : [...floor, { in: now }];
+    setFloor(next);
+    persist(events, opponent, next);
+  };
 
   const tap = (key: StatKey) => {
     setEvents(prev => {
@@ -82,7 +158,7 @@ export default function KidGame() {
     if (events.length === 0) {
       Alert.alert('Nothing Tracked', 'No stats recorded yet. Leave without saving?', [
         { text: 'Stay', style: 'cancel' },
-        { text: 'Leave', onPress: () => { AsyncStorage.removeItem(IN_PROGRESS_KEY); router.back(); } },
+        { text: 'Leave', onPress: () => { finished.current = true; AsyncStorage.removeItem(IN_PROGRESS_KEY); router.back(); } },
       ]);
       return;
     }
@@ -105,7 +181,7 @@ export default function KidGame() {
           onPress: () => {
             Alert.alert('Discard Game?', 'All taps from this game will be lost.', [
               { text: 'Cancel', style: 'cancel' },
-              { text: 'Discard', style: 'destructive', onPress: () => { AsyncStorage.removeItem(IN_PROGRESS_KEY); router.back(); } },
+              { text: 'Discard', style: 'destructive', onPress: () => { finished.current = true; AsyncStorage.removeItem(IN_PROGRESS_KEY); router.back(); } },
             ]);
           },
         },
@@ -156,6 +232,22 @@ export default function KidGame() {
         <Text style={styles.scoreLabel}>POINTS</Text>
       </View>
 
+      {/* Playing time. Optional — the tiles work whether or not this is used,
+          so forgetting it costs minutes, never stats. */}
+      <TouchableOpacity
+        style={[styles.floorBtn, onFloor ? { backgroundColor: accent, borderColor: accent } : styles.floorBtnOff]}
+        onPress={toggleFloor}
+        activeOpacity={0.8}
+      >
+        <Text style={[styles.floorText, onFloor ? { color: '#1A0F00' } : { color: '#8B6914' }]}>
+          {onFloor ? '● ON THE FLOOR' : '○ ON THE BENCH'}
+        </Text>
+        <Text style={[styles.floorClock, onFloor ? { color: '#1A0F00' } : { color: '#555' }]}>
+          {formatClock(floorSeconds(floor))}
+          {onFloor ? '' : floor.length === 0 ? '  ·  tap when she checks in' : '  ·  tap when she checks back in'}
+        </Text>
+      </TouchableOpacity>
+
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.grid}>
         {sortByStatOrder(profile.enabledStats).map(key => {
           const negative = STAT_DEFS[key].negative;
@@ -190,10 +282,18 @@ export default function KidGame() {
         skipLabel="SKIP — SAVE WITHOUT SCORE"
         onSubmit={score => {
           setShowScorePrompt(false);
+          // End Game closes an open stint — forgetting to tap OUT at the
+          // buzzer is the normal case, not an error.
+          const endedAt = Date.now();
+          const closed = onFloor
+            ? [...floor.slice(0, -1), { ...floor[floor.length - 1], out: endedAt }]
+            : floor;
           const game = saveGame(kidId!, events, {
             opponent, date: startedAt, teamScore: score ?? undefined,
+            floor: closed,
+            durationSec: Math.max(0, (endedAt - startedAt) / 1000 - pausedSec),
           });
-          AsyncStorage.removeItem(IN_PROGRESS_KEY);
+          finished.current = true; AsyncStorage.removeItem(IN_PROGRESS_KEY);
           router.replace({ pathname: '/kidshare', params: { kidId: kidId!, gameId: game.id } });
         }}
       />
@@ -233,6 +333,13 @@ const styles = StyleSheet.create({
   },
   scorePoints: { color: '#FF8A1F', fontSize: 44, fontWeight: '900' },
   scoreLabel: { color: '#8B6914', fontSize: 13, fontWeight: '700', letterSpacing: 3 },
+  floorBtn: {
+    marginHorizontal: 16, marginTop: 12, borderRadius: 10, borderWidth: 2,
+    paddingVertical: 10, alignItems: 'center', maxWidth: 528, width: '92%', alignSelf: 'center',
+  },
+  floorBtnOff: { backgroundColor: '#0D0700', borderColor: '#3D2800' },
+  floorText: { fontSize: 13, fontWeight: '900', letterSpacing: 2 },
+  floorClock: { fontSize: 11, fontWeight: '700', marginTop: 2, letterSpacing: 0.5 },
   grid: {
     flexDirection: 'row', flexWrap: 'wrap', gap: TILE_GAP,
     padding: 16, maxWidth: 560, width: '100%', alignSelf: 'center',

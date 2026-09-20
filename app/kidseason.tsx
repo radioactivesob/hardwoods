@@ -9,12 +9,12 @@ import * as Sharing from 'expo-sharing';
 import { useKidStats } from '../hooks/useKidStats';
 import {
   STAT_DEFS, StatKey, GameEntry, pointsFromTotals, shootingLine, kidColor,
-  profileSeason, gameSeason, gameResult,
+  profileSeason, gameSeason, gameResult, playingTime, formatClock,
 } from '../hooks/kidStats';
 import ScorePrompt from '../components/ScorePrompt';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
-type MetricKey = 'pts' | 'fgPct' | StatKey;
+type MetricKey = 'pts' | 'fgPct' | 'min' | StatKey;
 
 interface Metric {
   key: MetricKey;
@@ -37,6 +37,16 @@ function buildMetrics(games: GameEntry[]): Metric[] {
         return s.fgAttempted > 0 ? Math.round((s.fgMade / s.fgAttempted) * 100) : 0;
       },
       format: v => `${v}%`,
+    });
+  }
+  // Playing time, as minutes — only offered once a game has it, so seasons
+  // tracked before the toggle existed don't grow a chart full of zeros.
+  if (games.some(g => playingTime(g))) {
+    metrics.push({
+      key: 'min',
+      label: 'MIN',
+      value: g => Math.round((playingTime(g)?.sec ?? 0) / 60),
+      format: v => `${v}`,
     });
   }
   const COUNT_METRICS: StatKey[] = ['rebound', 'steal', 'assist', 'block', 'turnover', 'foul'];
@@ -314,6 +324,7 @@ export default function KidSeason() {
               (g.totals.steal ?? 0) > 0 ? `${g.totals.steal} STL` : null,
               (g.totals.assist ?? 0) > 0 ? `${g.totals.assist} AST` : null,
               (g.totals.foul ?? 0) > 0 ? `${g.totals.foul} PF` : null,
+              playingTime(g) ? `${formatClock(playingTime(g)!.sec)} on floor` : null,
             ].filter(Boolean);
             return (
               <TouchableOpacity

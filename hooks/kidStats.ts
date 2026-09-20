@@ -138,6 +138,16 @@ export interface StatEvent {
   at: number; // epoch ms
 }
 
+/**
+ * One stretch on the floor. Wall-clock, not game-clock — the phone can't
+ * see the scoreboard — so these are only ever shown as a *share* of the
+ * tracked game, which stoppages hit on both sides.
+ */
+export interface FloorStint {
+  in: number;
+  out?: number; // absent while she's still on the floor
+}
+
 export interface GameEntry {
   id: string;
   kidId: string;
@@ -147,6 +157,35 @@ export interface GameEntry {
   teamScore?: { us: number; them: number }; // optional final team score for context
   events: StatEvent[];
   totals: Record<StatKey, number>; // derived from events at save time
+  /** Playing time, if the parent used the floor toggle. Metadata, not a stat. */
+  floor?: FloorStint[];
+  /** Tracked wall seconds from tip to End Game, minus time the game was paused. */
+  durationSec?: number;
+}
+
+export function floorSeconds(stints: FloorStint[] | undefined, now = Date.now()): number {
+  if (!stints) return 0;
+  return stints.reduce((s, st) => s + Math.max(0, ((st.out ?? now) - st.in) / 1000), 0);
+}
+
+/** "18:42" */
+export function formatClock(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Playing time as the app presents it: share first, minutes second. Null
+ * when the toggle was never used, so old games don't show "0:00".
+ */
+export function playingTime(game: Pick<GameEntry, 'floor' | 'durationSec'>): { sec: number; share: number | null } | null {
+  if (!game.floor || game.floor.length === 0) return null;
+  const sec = floorSeconds(game.floor, game.floor[game.floor.length - 1].out ?? Date.now());
+  const share = game.durationSec && game.durationSec > 0
+    ? Math.min(1, sec / game.durationSec)
+    : null;
+  return { sec, share };
 }
 
 // "W 30–28" / "L 28–35" / "T 20–20", or null when no score was entered.

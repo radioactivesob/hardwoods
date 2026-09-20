@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   KidProfile,
   GameEntry,
+  FloorStint,
   StatEvent,
   StatKey,
   DEFAULT_ENABLED_STATS,
@@ -75,7 +76,10 @@ export function useKidStats() {
     }));
   }, [update]);
 
-  const saveGame = useCallback((kidId: string, events: StatEvent[], opts?: { opponent?: string; date?: number; teamScore?: { us: number; them: number } }) => {
+  const saveGame = useCallback((kidId: string, events: StatEvent[], opts?: {
+    opponent?: string; date?: number; teamScore?: { us: number; them: number };
+    floor?: FloorStint[]; durationSec?: number;
+  }) => {
     const profile = store.profiles.find(p => p.id === kidId);
     const game: GameEntry = {
       id: Date.now().toString(),
@@ -86,6 +90,9 @@ export function useKidStats() {
       teamScore: opts?.teamScore,
       events,
       totals: totalsFromEvents(events),
+      // Only stored when the floor toggle was actually used.
+      floor: opts?.floor && opts.floor.length > 0 ? opts.floor : undefined,
+      durationSec: opts?.floor && opts.floor.length > 0 ? opts.durationSec : undefined,
     };
     update(prev => ({ ...prev, games: [game, ...prev.games] }));
     return game;
