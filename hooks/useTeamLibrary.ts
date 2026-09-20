@@ -91,11 +91,53 @@ export function useTeamLibrary() {
     });
   }, []);
 
+  /**
+   * Edit a saved team in place. Team Stats treats the library as *the*
+   * roster, so there's no separate working copy and no save step to forget.
+   */
+  const updateTeam = useCallback((id: string, fn: (t: SavedTeam) => SavedTeam) => {
+    setLibrary(prev => {
+      const next = prev.map(t => (t.id === id ? fn(t) : t));
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  /** A new, empty team straight into the library — no scorebook slot needed. */
+  const createTeam = useCallback((name: string, color: string): SavedTeam => {
+    const entry: SavedTeam = {
+      id: Date.now().toString(), savedAt: Date.now(),
+      name: name.trim(), color, coachName: '', players: [],
+    };
+    setLibrary(prev => {
+      const next = [entry, ...prev];
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+    return entry;
+  }, []);
+
+  /**
+   * Append a player; returns her index so a live game can select her at
+   * once. The index comes from current state, not from inside the updater —
+   * React runs updaters later, so anything assigned there isn't visible here.
+   */
+  const addPlayer = useCallback((id: string, name: string, number: string): number => {
+    const index = library.find(t => t.id === id)?.players.length ?? 0;
+    updateTeam(id, t => ({
+      ...t,
+      players: [...t.players, { name: name.trim(), number: number.trim(), isStarting: false }],
+    }));
+    return index;
+  }, [library, updateTeam]);
+
   const reload = useCallback(() => {
     AsyncStorage.getItem(STORAGE_KEY).then(raw => {
       if (raw) setLibrary(JSON.parse(raw));
     });
   }, []);
 
-  return { library, loading, saveTeam, deleteTeam, setTeamStats, reload };
+  return {
+    library, loading, saveTeam, deleteTeam, setTeamStats, updateTeam, createTeam, addPlayer, reload,
+  };
 }

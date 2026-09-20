@@ -18,7 +18,7 @@ import { useAllOrientations } from '../hooks/useScreenOrientation';
 export default function TeamStats() {
   useAllOrientations();
   const router = useRouter();
-  const { library, loading, setTeamStats, reload } = useTeamLibrary();
+  const { library, loading, setTeamStats, createTeam, reload } = useTeamLibrary();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [inProgress, setInProgress] = useState<TeamStatsInProgress | null>(null);
 
@@ -38,6 +38,21 @@ export default function TeamStats() {
   const team = library.find(t => t.id === selectedId) ?? null;
   const enabled = team ? teamEnabledStats(team) : [];
   const resumable = inProgress && inProgress.teamId === selectedId && inProgress.events.length > 0;
+
+  const newTeam = () => {
+    Alert.prompt('New Team', 'What are they called?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Create',
+        onPress: (name?: string) => {
+          if (!name?.trim()) return;
+          const t = createTeam(name, '#1E90FF');
+          setSelectedId(t.id);
+          router.push({ pathname: '/teamroster', params: { teamId: t.id } });
+        },
+      },
+    ]);
+  };
 
   const toggleStat = (t: SavedTeam, key: StatKey) => {
     const current = teamEnabledStats(t);
@@ -96,11 +111,11 @@ export default function TeamStats() {
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>No saved teams yet</Text>
             <Text style={styles.emptyHint}>
-              Team Stats uses the same rosters as the Full Scorebook. Build the team
-              once in Team Setup, save it to the library, and it shows up here.
+              Name the team, add the players, and you're ready. The same roster
+              works in the Full Scorebook too.
             </Text>
-            <TouchableOpacity style={styles.rosterBtn} onPress={() => router.push('/teams')}>
-              <Text style={styles.rosterBtnText}>SET UP A TEAM</Text>
+            <TouchableOpacity style={styles.rosterBtn} onPress={newTeam}>
+              <Text style={styles.rosterBtnText}>+ NEW TEAM</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -123,12 +138,19 @@ export default function TeamStats() {
                       {t.coachName ? ` · ${t.coachName}` : ''}
                     </Text>
                   </View>
-                  {on && <Text style={[styles.check, { color: t.color }]}>✓</Text>}
+                  {on ? (
+                    <TouchableOpacity
+                      style={[styles.editBtn, { borderColor: t.color }]}
+                      onPress={() => router.push({ pathname: '/teamroster', params: { teamId: t.id } })}
+                    >
+                      <Text style={[styles.editBtnText, { color: t.color }]}>ROSTER ›</Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </TouchableOpacity>
               );
             })}
-            <TouchableOpacity style={styles.rosterLink} onPress={() => router.push('/teams')}>
-              <Text style={styles.rosterLinkText}>EDIT ROSTERS IN TEAM SETUP ›</Text>
+            <TouchableOpacity style={styles.rosterLink} onPress={newTeam}>
+              <Text style={styles.rosterLinkText}>+ NEW TEAM</Text>
             </TouchableOpacity>
 
             {team && (
@@ -203,6 +225,8 @@ const styles = StyleSheet.create({
   colorDot: { width: 14, height: 14, borderRadius: 7 },
   teamName: { color: '#FFF', fontSize: 15, fontWeight: '800' },
   teamMeta: { color: '#666', fontSize: 11, marginTop: 2 },
+  editBtn: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
+  editBtnText: { fontSize: 10, fontWeight: '800', letterSpacing: 1 },
   check: { fontSize: 18, fontWeight: '900' },
   rosterLink: { alignSelf: 'flex-start', paddingVertical: 6, marginBottom: 8 },
   rosterLinkText: { color: '#8B6914', fontSize: 11, fontWeight: '800', letterSpacing: 1 },

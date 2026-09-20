@@ -45,7 +45,7 @@ export default function TeamStatsGame() {
   useKeepAwake();
   const router = useRouter();
   const { teamId } = useLocalSearchParams<{ teamId: string }>();
-  const { library, loading } = useTeamLibrary();
+  const { library, loading, addPlayer } = useTeamLibrary();
   const { archiveGame, loading: archiveLoading } = useTeamGames();
   const { profiles, saveGame, loading: kidsLoading } = useKidStats();
 
@@ -124,6 +124,31 @@ export default function TeamStatsGame() {
         },
       ],
     );
+  };
+
+  // A girl shows up who isn't on the roster. Add her to the saved team right
+  // here and select her — no trip to another screen, nothing to save.
+  const addOnTheFly = () => {
+    if (!team) return;
+    Alert.prompt('Add a Player', 'Jersey number', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Next',
+        onPress: (number?: string) => {
+          Alert.prompt('Add a Player', `Name for #${(number ?? '').trim() || '?'}`, [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Add',
+              onPress: (name?: string) => {
+                if (!name?.trim() && !number?.trim()) return;
+                const idx = addPlayer(team.id, name ?? '', number ?? '');
+                setSelected(idx);
+              },
+            },
+          ]);
+        },
+      },
+    ], 'plain-text', '', 'number-pad');
   };
 
   const endGame = () => {
@@ -316,6 +341,10 @@ export default function TeamStatsGame() {
             <Text style={[styles.chipName, { color: '#555' }]}>OUT</Text>
           </TouchableOpacity>
         )}
+        <TouchableOpacity style={[styles.chip, styles.chipAdd]} onPress={addOnTheFly} activeOpacity={0.7}>
+          <Text style={[styles.chipNumber, { color: '#8B6914' }]}>+</Text>
+          <Text style={[styles.chipName, { color: '#8B6914' }]}>ADD</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.grid}>
@@ -404,6 +433,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A0F00', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4,
   },
   chipOut: { opacity: 0.5 },
+  chipAdd: { borderColor: '#3D2800', borderStyle: 'dashed' },
   chipNumber: { fontSize: 24, fontWeight: '900', lineHeight: 28 },
   chipName: { color: '#AAA', fontSize: 9, fontWeight: '600', marginTop: 1 },
   grid: {
