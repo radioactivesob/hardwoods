@@ -26,6 +26,32 @@ export interface TeamStatsInProgress {
   out: number[];
 }
 
+/**
+ * Jersey order, the way a coach reads a roster: numeric where both sides
+ * parse (#9 before #10, not after #1), anything unparseable last, and a
+ * stable tie-break on the original position so equal numbers don't shuffle.
+ */
+export function byJersey<T extends { number?: string }>(a: T & { i: number }, b: T & { i: number }): number {
+  const na = parseInt(a.number ?? '', 10);
+  const nb = parseInt(b.number ?? '', 10);
+  const va = Number.isNaN(na) ? Number.POSITIVE_INFINITY : na;
+  const vb = Number.isNaN(nb) ? Number.POSITIVE_INFINITY : nb;
+  return va - vb || a.i - b.i;
+}
+
+/**
+ * Fouls to the limit, for tinting a player's chip. Team Stats has no rules
+ * screen, so this assumes the five-foul limit nearly every youth league uses.
+ */
+export const FOUL_LIMIT = 5;
+export type FoulState = 'ok' | 'trouble' | 'danger' | 'out';
+export function foulState(fouls: number): FoulState {
+  if (fouls >= FOUL_LIMIT) return 'out';
+  if (fouls >= FOUL_LIMIT - 1) return 'danger';
+  if (fouls >= FOUL_LIMIT - 2) return 'trouble';
+  return 'ok';
+}
+
 export function teamEnabledStats(team: Pick<SavedTeam, 'enabledStats'>): StatKey[] {
   return team.enabledStats && team.enabledStats.length > 0 ? team.enabledStats : DEFAULT_ENABLED_STATS;
 }

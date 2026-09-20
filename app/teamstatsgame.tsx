@@ -14,8 +14,26 @@ import { STAT_DEFS, StatKey, sortByStatOrder, pointsFromTotals, findProfileForPl
 import {
   TeamStatEvent, TeamStatsInProgress, TEAM_STATS_IN_PROGRESS_KEY,
   teamEnabledStats, totalsByPlayer, eventsForPlayer, archivedGameFromTeamStats,
+  byJersey, foulState, FoulState,
 } from '../hooks/teamStats';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
+
+const FOUL_COLORS: Record<Exclude<FoulState, 'ok'>, string> = {
+  trouble: '#E0A030', danger: '#C25E5E', out: '#3D2800',
+};
+
+/** "4/9 · 44%" for a shooting stat, or null once there's nothing to say. */
+function shootingPct(totals: Record<StatKey, number>, key: StatKey): string | null {
+  const pair: Partial<Record<StatKey, [StatKey, StatKey]>> = {
+    points2: ['points2', 'miss2'], miss2: ['points2', 'miss2'],
+    points3: ['points3', 'miss3'], miss3: ['points3', 'miss3'],
+    ftMade: ['ftMade', 'ftMiss'], ftMiss: ['ftMade', 'ftMiss'],
+  };
+  const p = pair[key];
+  if (!p) return null;
+  const made = totals[p[0]], att = made + totals[p[1]];
+  return att > 0 ? `${made}/${att} · ${Math.round((made / att) * 100)}%` : null;
+}
 
 /**
  * The Team Stats tap screen. Pick a player on the strip, tap a stat. The
@@ -198,7 +216,22 @@ export default function TeamStatsGame() {
   const lastEvent = events[events.length - 1];
   const color = team.color;
   const selectedTotals = selected !== null ? totals[selected] : null;
-  const dressed = team.players.map((p, i) => ({ p, i })).filter(({ p }) => p.name || p.number);
+  // Jersey order on the strip, and players marked out come off it entirely —
+  // they're reachable through the trailing OUT chip instead.
+  const rostered = team.players.map((p, i) => ({ ...p, i })).filter(p => p.name || p.number);
+  const dressed = rostered.filter(p => !out.includes(p.i)).sort(byJersey);
+  const benched = rostered.filter(p => out.includes(p.i)).sort(byJersey);
+
+  const showOut = () => {
+    Alert.alert(
+      `Out tonight (${benched.length})`,
+      benched.map(p => `#${p.number || '?'} ${p.name}`).join('\n'),
+      [
+        { text: 'Close', style: 'cancel' },
+        ...benched.map(p => ({ text: `Bring back #${p.number || '?'}`, onPress: () => toggleOut(p.i) })),
+      ],
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -244,37 +277,54 @@ export default function TeamStatsGame() {
         style={styles.strip}
         contentContainerStyle={styles.stripContent}
       >
-        {dressed.map(({ p, i }) => {
+        {dressed.map(p => {
+          const i = p.i;
           const on = selected === i;
-          const isOut = out.includes(i);
+          const fouls = foulState(totals[i].foul);
+          // Foul trouble shows on the chip border so it's visible without
+          // selecting her: amber at 3, red at 4, and greyed out on the fifth.
+          const border = fouls === 'ok' ? color : FOUL_COLORS[fouls];
           return (
             <TouchableOpacity
               key={i}
               style={[
                 styles.chip,
-                { borderColor: isOut ? '#3D2800' : color },
-                on && { backgroundColor: color },
-                isOut && styles.chipOut,
+                { borderColor: border },
+                fouls !== 'ok' && { borderWidth: 3 },
+                on && { backgroundColor: fouls === 'ok' ? color : border },
+                fouls === 'out' && !on && styles.chipOut,
               ]}
-              onPress={() => !isOut && setSelected(on ? null : i)}
+              onPress={() => setSelected(on ? null : i)}
               onLongPress={() => toggleOut(i)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.chipNumber, { color: on ? '#0D0700' : isOut ? '#555' : color }]}>
+              <Text style={[styles.chipNumber, { color: on ? '#0D0700' : fouls === 'out' ? '#777' : color }]}>
                 {p.number || '?'}
               </Text>
-              <Text style={[styles.chipName, on && { color: '#0D0700' }, isOut && { color: '#555' }]} numberOfLines={1}>
-                {isOut ? 'OUT' : (p.name.split(' ')[0] || 'Player')}
+              <Text
+                style={[styles.chipName, on && { color: '#0D0700' }, fouls === 'out' && !on && { color: '#777' }]}
+                numberOfLines={1}
+              >
+                {fouls === 'ok' ? (p.name.split(' ')[0] || 'Player') : `${totals[i].foul} FOULS`}
               </Text>
             </TouchableOpacity>
           );
         })}
+        {benched.length > 0 && (
+          <TouchableOpacity style={[styles.chip, styles.chipOut]} onPress={showOut} activeOpacity={0.7}>
+            <Text style={[styles.chipNumber, { color: '#555' }]}>{benched.length}</Text>
+            <Text style={[styles.chipName, { color: '#555' }]}>OUT</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.grid}>
         {enabled.map(key => {
           const negative = STAT_DEFS[key].negative;
           const count = selectedTotals ? selectedTotals[key] : null;
+          // Hot or cold at a glance: the made/missed pair for this shot type
+          // reads as "4/9 · 44%" under both tiles once she's attempted one.
+          const pct = selectedTotals ? shootingPct(selectedTotals, key) : null;
           return (
             <TouchableOpacity
               key={key}
@@ -288,6 +338,7 @@ export default function TeamStatsGame() {
               <Text style={[styles.tileLabel, negative && styles.tileLabelNegative]}>
                 {STAT_DEFS[key].label}
               </Text>
+              {pct && <Text style={styles.tilePct}>{pct}</Text>}
             </TouchableOpacity>
           );
         })}
@@ -370,6 +421,7 @@ const styles = StyleSheet.create({
   tileCount: { fontSize: 30, fontWeight: '900' },
   tileLabel: { color: '#C8A040', fontSize: 13, fontWeight: '800', letterSpacing: 1.5, marginTop: 2 },
   tileLabelNegative: { color: '#C25E5E' },
+  tilePct: { color: '#8B6914', fontSize: 10, fontWeight: '700', marginTop: 3 },
   undoBar: {
     backgroundColor: '#0D0700', borderTopWidth: 1, borderTopColor: '#3D2800',
     paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center',

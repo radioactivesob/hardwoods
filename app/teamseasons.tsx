@@ -31,7 +31,7 @@ interface PlayerAgg {
 export default function TeamSeasons() {
   useAllOrientations();
   const router = useRouter();
-  const { loading, teams, gamesForTeam, deleteGame } = useTeamGames();
+  const { loading, teams, gamesForTeam, deleteGame, setOpponent } = useTeamGames();
   const { team: teamParam } = useLocalSearchParams<{ team?: string }>();
   const [selected, setSelected] = useState<string | null>(teamParam ?? null);
   const [opponentFilter, setOpponentFilter] = useState<string | null>(null);
@@ -180,10 +180,36 @@ export default function TeamSeasons() {
                 ? () => router.push({ pathname: '/teamstatsshare', params: { gameId: r.game.id } })
                 : undefined}
               onLongPress={() => {
-                Alert.alert('Delete Game?', `${formatDate(r.game.date)} vs. ${r.them.name || 'opponent'}. This cannot be undone.`, [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Delete', style: 'destructive', onPress: () => deleteGame(r.game.id) },
-                ]);
+                const hasOpp = r.them.name && r.them.name !== 'Opponent';
+                Alert.alert(
+                  `${formatDate(r.game.date)} vs. ${hasOpp ? r.them.name : 'opponent'}`,
+                  `${r.usScore} — ${r.themScore}`,
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: hasOpp ? 'Edit Opponent' : 'Add Opponent',
+                      onPress: () => Alert.prompt(
+                        'Opponent', 'Who was this game against?',
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          { text: 'Save', onPress: (v?: string) => team && setOpponent(r.game.id, team.name, v ?? '') },
+                        ],
+                        'plain-text', hasOpp ? r.them.name : '',
+                      ),
+                    },
+                    ...(r.game.source === 'teamstats' ? [{
+                      text: 'Edit Stats',
+                      onPress: () => router.push({ pathname: '/teamstatsedit', params: { gameId: r.game.id } }),
+                    }] : []),
+                    {
+                      text: 'Delete Game', style: 'destructive' as const,
+                      onPress: () => Alert.alert('Delete Game?', 'This cannot be undone.', [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Delete', style: 'destructive', onPress: () => deleteGame(r.game.id) },
+                      ]),
+                    },
+                  ],
+                );
               }}
               activeOpacity={0.8}
             >
@@ -199,7 +225,7 @@ export default function TeamSeasons() {
             </TouchableOpacity>
           );
         })}
-        <Text style={styles.deleteHint}>Long-press a game to delete it.</Text>
+        <Text style={styles.deleteHint}>Long-press a game to fix the opponent, edit stats, or delete it.</Text>
 
         {players.length > 0 && (
           <>

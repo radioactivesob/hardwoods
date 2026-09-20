@@ -84,6 +84,30 @@ export function useTeamGames() {
     });
   }, []);
 
+  /** Replace one archived game wholesale — used by after-the-fact edits. */
+  const updateGame = useCallback((id: string, fn: (g: ArchivedGame) => ArchivedGame) => {
+    setGames(prev => {
+      const next = prev.map(g => (g.id === id ? fn(g) : g));
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  /**
+   * Rename the side that isn't `teamName`. Team Stats games only ever have
+   * an opponent name on the other side, so this is how a forgotten one gets
+   * filled in.
+   */
+  const setOpponent = useCallback((id: string, teamName: string, opponent: string) => {
+    const key = teamName.trim().toLowerCase();
+    const name = opponent.trim() || 'Opponent';
+    updateGame(id, g =>
+      g.teamA.name.trim().toLowerCase() === key
+        ? { ...g, teamB: { ...g.teamB, name } }
+        : { ...g, teamA: { ...g.teamA, name } },
+    );
+  }, [updateGame]);
+
   const deleteGame = useCallback((id: string) => {
     setGames(prev => {
       const next = prev.filter(g => g.id !== id);
@@ -135,5 +159,5 @@ export function useTeamGames() {
       .sort((a, b) => a.game.date - b.game.date);
   }, [games]);
 
-  return { games, loading, archiveGame, deleteGame, teams, gamesForTeam };
+  return { games, loading, archiveGame, updateGame, setOpponent, deleteGame, teams, gamesForTeam };
 }

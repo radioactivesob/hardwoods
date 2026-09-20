@@ -8,6 +8,7 @@ import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { useTeamGames, ArchivedPlayer } from '../hooks/useTeamGames';
 import { StatKey } from '../hooks/kidStats';
+import { byJersey } from '../hooks/teamStats';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
 // Rosters carry full names, but the card has seven stat columns to fit —
@@ -66,7 +67,8 @@ export default function TeamStatsShare() {
   const won = game.finalA > game.finalB;
   const result = won ? 'W' : game.finalA < game.finalB ? 'L' : 'T';
   const color = us.color;
-  const players = [...us.players].sort((a, b) => b.stats.points - a.stats.points);
+  // Jersey order, the way the coach reads it against her own roster sheet.
+  const players = us.players.map((p, i) => ({ ...p, i })).sort(byJersey);
   const columns = COLUMNS.filter(c => players.some(c.present)).slice(0, MAX_COLUMNS);
 
   const share = async () => {
