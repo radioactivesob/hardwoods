@@ -50,11 +50,14 @@ export default function TeamSeasons() {
   if (!team) {
     body = teamList.length === 0 ? (
       <View style={styles.emptyState}>
-        <Text style={styles.emptyTitle}>No archived games yet</Text>
+        <Text style={styles.emptyTitle}>No saved games yet</Text>
         <Text style={styles.emptyHint}>
-          Run a game in the Full Scorebook and tap END GAME to save it here.
+          Finish a game in Team Stats or the Full Scorebook and it lands here.
           Seasons build themselves from your saved games.
         </Text>
+        <TouchableOpacity style={styles.importBtn} onPress={() => router.push('/kidimport')}>
+          <Text style={styles.importBtnText}>IMPORT A GAME FILE</Text>
+        </TouchableOpacity>
       </View>
     ) : (
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -72,6 +75,9 @@ export default function TeamSeasons() {
             <Text style={styles.chevron}>›</Text>
           </TouchableOpacity>
         ))}
+        <TouchableOpacity style={styles.importLink} onPress={() => router.push('/kidimport')}>
+          <Text style={styles.importLinkText}>IMPORT A GAME SOMEONE SENT ›</Text>
+        </TouchableOpacity>
       </ScrollView>
     );
   } else {
@@ -349,4 +355,11 @@ const styles = StyleSheet.create({
   cell: { flex: 1, color: '#DDD', fontSize: 12, fontWeight: '600', textAlign: 'center' },
   cellName: { flex: 2.2, textAlign: 'left', color: '#FFF' },
   headerCell: { color: '#8B6914', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+  importBtn: {
+    marginTop: 18, borderWidth: 1, borderColor: '#8B6914', borderRadius: 8,
+    paddingVertical: 12, paddingHorizontal: 22,
+  },
+  importBtnText: { color: '#C8A040', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
+  importLink: { alignSelf: 'center', paddingVertical: 14, marginTop: 6 },
+  importLinkText: { color: '#8B6914', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
 });
