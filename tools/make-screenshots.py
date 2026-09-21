@@ -125,9 +125,9 @@ IPAD_FRAMES = [
 ]
 
 FRAMES = [
-    ("Track your kid",        "From the stands, one tap at a time",
+    ("Track your kid",        "Every stat, and how much she played",
      ["06-kidgame.png"],                                     "01-track.png"),
-    ("Track the whole team",  "Every player on the roster, two taps per stat",
+    ("Track the whole team",  "Foul trouble and hot hands, at a glance",
      ["13-teamstats.png"],                                   "02-team.png"),
     ("Watch them improve",    "Game-by-game trends, all season long",
      ["07-kidseason.png"],                                   "03-season.png"),
