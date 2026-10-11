@@ -103,6 +103,16 @@ export function useTraining() {
     [store.targets],
   );
 
+  /** Her overrides as the backup carries them: keyed by drill id alone. */
+  const targetsForKid = useCallback((kidId: string): Record<string, number> => {
+    const prefix = `${kidId}:`;
+    const out: Record<string, number> = {};
+    Object.entries(store.targets).forEach(([k, v]) => {
+      if (k.startsWith(prefix)) out[k.slice(prefix.length)] = v;
+    });
+    return out;
+  }, [store.targets]);
+
   const sessionsForKid = useCallback(
     (kidId: string) =>
       store.sessions.filter(s => s.kidId === kidId).sort((a, b) => a.date - b.date),
@@ -119,9 +129,56 @@ export function useTraining() {
     [allDrills],
   );
 
+  /**
+   * Restore sessions from a backup. Ids are content-derived, so filtering on
+   * them makes restoring the same file twice a no-op. The count is computed
+   * from current state before calling update — a state updater runs later,
+   * so anything assigned inside one can't be returned from here.
+   */
+  const importSessions = useCallback((incoming: Session[]) => {
+    const have = new Set(store.sessions.map(s => s.id));
+    const fresh = incoming.filter(s => !have.has(s.id));
+    if (fresh.length === 0) return 0;
+    update(prev => {
+      const seen = new Set(prev.sessions.map(s => s.id));
+      return {
+        ...prev,
+        sessions: [...fresh.filter(s => !seen.has(s.id)), ...prev.sessions]
+          .sort((a, b) => b.date - a.date),
+      };
+    });
+    return fresh.length;
+  }, [update, store.sessions]);
+
+  /** Target overrides from a backup, keyed by drill id on the way in. */
+  const importTargets = useCallback((kidId: string, byDrill: Record<string, number>) => {
+    update(prev => {
+      const next = { ...prev.targets };
+      Object.entries(byDrill).forEach(([drillId, target]) => {
+        next[targetKey(kidId, drillId)] = target;
+      });
+      return { ...prev, targets: next };
+    });
+  }, [update]);
+
+  /** Coach drills a backup refers to; existing ids win, so nothing is clobbered. */
+  const importDrills = useCallback((incoming: Drill[]) => {
+    if (incoming.length === 0) return;
+    update(prev => {
+      const have = new Set([...prev.drills, ...BUILT_IN_DRILLS].map(d => d.id));
+      const fresh = incoming.filter(d => !have.has(d.id));
+      return fresh.length ? { ...prev, drills: [...prev.drills, ...fresh] } : prev;
+    });
+  }, [update]);
+
   return {
     sessions: store.sessions,
     importedDrills: store.drills,
+    targets: store.targets,
+    targetsForKid,
+    importSessions,
+    importTargets,
+    importDrills,
     loading,
     saveSession,
     deleteSession,

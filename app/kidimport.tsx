@@ -9,6 +9,7 @@ import {
   parseTransfer, planMerge, matchProfile, toGameEntry, TransferGame,
 } from '../hooks/kidTransfer';
 import { TEAM_TRANSFER_FORMAT } from '../hooks/teamTransfer';
+import { PROFILE_FORMAT } from '../hooks/profileBackup';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
 /**
@@ -54,11 +55,16 @@ export default function KidImport() {
       return;
     }
 
-    // Both file types share the .hardwoods extension and land here from iOS.
-    // A team game goes to its own merge screen; the JSON rides along as a
-    // param so the file isn't read twice.
-    if ((json as { format?: string })?.format === TEAM_TRANSFER_FORMAT) {
+    // Every file type shares the .hardwoods extension and lands here from
+    // iOS, so this is the one place that routes on format. The JSON rides
+    // along as a param rather than being read from disk twice.
+    const format = (json as { format?: string })?.format;
+    if (format === TEAM_TRANSFER_FORMAT) {
       router.replace({ pathname: '/teamimport', params: { payload: JSON.stringify(json) } });
+      return;
+    }
+    if (format === PROFILE_FORMAT) {
+      router.replace({ pathname: '/profileimport', params: { payload: JSON.stringify(json) } });
       return;
     }
 

@@ -7,6 +7,10 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useKidStats, IN_PROGRESS_KEY } from '../hooks/useKidStats';
 import { STAT_DEFS, StatKey, MAX_ENABLED_STATS, STAT_ORDER, KidProfile, pointsFromTotals, KID_COLORS, DEFAULT_KID_COLOR, kidColor, profileSeason, gameSeason } from '../hooks/kidStats';
+import { useTraining } from '../hooks/useTraining';
+import { buildProfileBackup, suggestBackupFileName } from '../hooks/profileBackup';
+import { File, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
 const ALL_ORIENTATIONS = ['portrait', 'portrait-upside-down', 'landscape-left', 'landscape-right'] as const;
@@ -15,6 +19,11 @@ export default function MyKid() {
   useAllOrientations();
   const router = useRouter();
   const { profiles, loading, addProfile, updateProfile, deleteProfile, gamesForKid, startNewSeason, reload } = useKidStats();
+  const {
+    sessionsForKid, targetsForKid, importedDrills, reload: reloadTraining,
+    loading: trainingLoading,
+  } = useTraining();
+  const [backingUp, setBackingUp] = useState<string | null>(null);
   // A paused game shows on its kid's card and turns START into RESUME.
   // Re-read on every focus — this screen is where you land after pausing.
   const [liveGame, setLiveGame] = useState<{ kidId: string; count: number } | null>(null);
@@ -23,6 +32,7 @@ export default function MyKid() {
       // Games saved elsewhere land in storage while this screen is still
       // mounted underneath, so re-read rather than trusting mount-time state.
       reload();
+      reloadTraining();
       AsyncStorage.getItem(IN_PROGRESS_KEY).then(raw => {
         if (raw) {
           const saved = JSON.parse(raw);
@@ -31,7 +41,7 @@ export default function MyKid() {
           setLiveGame(null);
         }
       });
-    }, [reload]),
+    }, [reload, reloadTraining]),
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -87,6 +97,46 @@ export default function MyKid() {
       'plain-text',
       profile.name,
     );
+  };
+
+  /**
+   * Everything about this kid in one file: profile, games, training
+   * sessions, her drill targets. The only way back from a deleted app, and
+   * the file that moves a season to a new phone.
+   */
+  const backUp = async (profile: KidProfile) => {
+    if (trainingLoading) {
+      Alert.alert('One Moment', 'Still loading training sessions — try again in a second.');
+      return;
+    }
+    const games = gamesForKid(profile.id);
+    const sessions = sessionsForKid(profile.id);
+    if (games.length === 0 && sessions.length === 0) {
+      Alert.alert('Nothing to Back Up', `${profile.name} has no games or training sessions yet.`);
+      return;
+    }
+    try {
+      setBackingUp(profile.id);
+      const payload = buildProfileBackup(
+        profile, games, sessions, targetsForKid(profile.id), importedDrills,
+      );
+      const file = new File(Paths.cache, suggestBackupFileName(payload.player));
+      file.create({ overwrite: true });
+      file.write(JSON.stringify(payload));
+      if (!(await Sharing.isAvailableAsync())) {
+        Alert.alert('Sharing Unavailable', 'This device cannot open the share sheet.');
+        return;
+      }
+      await Sharing.shareAsync(file.uri, {
+        mimeType: 'application/octet-stream',
+        dialogTitle: `${profile.name} — ${games.length} game${games.length === 1 ? '' : 's'}, ${sessions.length} session${sessions.length === 1 ? '' : 's'}`,
+        UTI: 'com.hardwoods.gamefile',
+      });
+    } catch {
+      Alert.alert('Backup Failed', 'Could not create the file. Try again.');
+    } finally {
+      setBackingUp(null);
+    }
   };
 
   const handleDelete = (profile: KidProfile) => {
@@ -300,6 +350,19 @@ export default function MyKid() {
                   <Text style={styles.newSeasonBtnText}>⟳ START NEW SEASON</Text>
                 </TouchableOpacity>
 
+                <TouchableOpacity
+                  style={[styles.newSeasonBtn, backingUp === profile.id && { opacity: 0.6 }]}
+                  onPress={backingUp ? undefined : () => backUp(profile)}
+                >
+                  <Text style={styles.newSeasonBtnText}>
+                    {backingUp === profile.id ? 'PREPARING…' : '⤓ BACK UP EVERYTHING'}
+                  </Text>
+                </TouchableOpacity>
+                <Text style={styles.backupHint}>
+                  Games, training sessions, and settings in one file. Send it to
+                  yourself — it's the only way back if the app is deleted.
+                </Text>
+
                 <TouchableOpacity style={styles.deleteRow} onPress={() => handleEdit(profile)}>
                   <Text style={[styles.deleteRowText, { color: '#8B6914' }]}>EDIT NAME & NUMBER</Text>
                 </TouchableOpacity>
@@ -313,9 +376,9 @@ export default function MyKid() {
 
         {!loading && (
           <TouchableOpacity style={styles.importRow} onPress={() => router.push('/kidimport')}>
-            <Text style={styles.importText}>⤓ IMPORT GAMES FROM A FILE</Text>
+            <Text style={styles.importText}>⤓ OPEN A FILE</Text>
             <Text style={styles.importHint}>
-              Games another parent tracked and sent you
+              Games another parent sent you, or a backup to restore
             </Text>
           </TouchableOpacity>
         )}
@@ -475,6 +538,7 @@ const styles = StyleSheet.create({
   },
   importText: { color: '#C8A040', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
   importHint: { color: '#5A4210', fontSize: 10, marginTop: 3 },
+  backupHint: { color: '#555', fontSize: 11, lineHeight: 16, textAlign: 'center', paddingHorizontal: 12, marginTop: 6 },
   deleteRow: { alignItems: 'center', marginTop: 8, paddingVertical: 8 },
   deleteRowText: { color: '#7A1A1A', fontSize: 11, fontWeight: '700', letterSpacing: 1 },
   overlay: { flex: 1, backgroundColor: '#000000BB', justifyContent: 'center', alignItems: 'center' },
