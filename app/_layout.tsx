@@ -12,7 +12,9 @@ LogBox.ignoreLogs(['SafeAreaView has been deprecated']);
 /**
  * iOS hands us a file:// URL when someone opens a .hardwoods file from
  * AirDrop, Messages, or Files. Route it to the import screen instead of
- * letting expo-router try to match it as a path.
+ * letting expo-router try to match it as a path. expo-router sees the same
+ * URL and can't match it — `app/+not-found.tsx` redirects that away so it
+ * doesn't sit in the stack behind the importer.
  */
 function useIncomingFiles() {
   const router = useRouter();

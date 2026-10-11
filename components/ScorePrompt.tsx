@@ -9,7 +9,9 @@ const ALL_ORIENTATIONS = ['portrait', 'portrait-upside-down', 'landscape-left', 
 interface Props {
   visible: boolean;
   accent: string;
-  initial?: { us: number; them: number };
+  /** Prefill either side. Team Stats knows our score — it's been counting
+   *  it all game — so only the opponent's is left to type. */
+  initial?: { us?: number; them?: number };
   // null = user chose to proceed without a score (skip)
   onSubmit: (score: { us: number; them: number } | null) => void;
   skipLabel?: string; // omit to hide the skip path (backfill mode uses cancel instead)
@@ -24,10 +26,13 @@ export default function ScorePrompt({ visible, accent, initial, onSubmit, skipLa
   const [us, setUs] = useState('');
   const [them, setThem] = useState('');
 
+  // Start on the field that still needs an answer.
+  const usPrefilled = initial?.us !== undefined && initial?.them === undefined;
+
   useEffect(() => {
     if (visible) {
-      setUs(initial ? String(initial.us) : '');
-      setThem(initial ? String(initial.them) : '');
+      setUs(initial?.us !== undefined ? String(initial.us) : '');
+      setThem(initial?.them !== undefined ? String(initial.them) : '');
     }
   }, [visible, initial]);
 
@@ -62,7 +67,8 @@ export default function ScorePrompt({ visible, accent, initial, onSubmit, skipLa
                 maxLength={3}
                 placeholder="0"
                 placeholderTextColor="#444"
-                autoFocus
+                autoFocus={!usPrefilled}
+                selectTextOnFocus
               />
             </View>
             <Text style={styles.dash}>—</Text>
@@ -76,6 +82,8 @@ export default function ScorePrompt({ visible, accent, initial, onSubmit, skipLa
                 maxLength={3}
                 placeholder="0"
                 placeholderTextColor="#444"
+                autoFocus={usPrefilled}
+                selectTextOnFocus
               />
             </View>
           </View>

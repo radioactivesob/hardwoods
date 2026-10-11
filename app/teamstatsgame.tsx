@@ -388,7 +388,9 @@ export default function TeamStatsGame() {
       <ScorePrompt
         visible={showScorePrompt}
         accent={color}
-        hint="From the gym scoreboard — the box score and team record need it."
+        // Our score is already counted; only theirs needs typing.
+        initial={{ us: teamPts }}
+        hint="Ours is what you tracked — enter theirs from the gym scoreboard."
         onSubmit={score => { if (score) finish(score); }}
         onCancel={() => setShowScorePrompt(false)}
       />
