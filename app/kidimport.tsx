@@ -10,6 +10,7 @@ import {
 } from '../hooks/kidTransfer';
 import { TEAM_TRANSFER_FORMAT } from '../hooks/teamTransfer';
 import { PROFILE_FORMAT } from '../hooks/profileBackup';
+import { TEAM_SEASON_FORMAT } from '../hooks/teamSeasonTransfer';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
 /**
@@ -65,6 +66,10 @@ export default function KidImport() {
     }
     if (format === PROFILE_FORMAT) {
       router.replace({ pathname: '/profileimport', params: { payload: JSON.stringify(json) } });
+      return;
+    }
+    if (format === TEAM_SEASON_FORMAT) {
+      router.replace({ pathname: '/teamseasonimport', params: { payload: JSON.stringify(json) } });
       return;
     }
 

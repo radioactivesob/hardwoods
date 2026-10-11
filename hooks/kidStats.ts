@@ -53,6 +53,15 @@ export const DEFAULT_ENABLED_STATS: StatKey[] = [
 // Keep the tap grid fat-finger-proof.
 export const MAX_ENABLED_STATS = 10;
 
+/**
+ * Team Stats gets two more. The My Kid cap is about tapping accurately from
+ * the stands with one hand; in Team Stats you've already selected a player,
+ * the grid has room for six rows, and coaches ask for turnovers and blocks on
+ * top of the ten a parent tracks. Dropping a *miss* to make room would be the
+ * wrong trade — made/missed pairs are what shooting percentages are built on.
+ */
+export const TEAM_MAX_ENABLED_STATS = 12;
+
 // Canonical display order for the config chips and the tap grid.
 // The grid is two columns, so pairs (make | miss) land on the same row.
 export const STAT_ORDER: StatKey[] = [

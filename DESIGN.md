@@ -48,6 +48,18 @@ official book is the extra.
 | Simple Scorebook | `simplegame` | Two teams, no roster, just the score |
 | Team Seasons | `teamseasons` | Every archived team game — scorebook and Team Stats — with records and player averages |
 
+**Team Stats tracks up to twelve stats** (`TEAM_MAX_ENABLED_STATS`), two more
+than My Kid. The ten-stat cap is about tapping accurately one-handed from the
+stands; in Team Stats a player is selected first, twelve tiles fit on one screen
+without scrolling (verified), and coaches ask for turnovers and blocks on top of
+what a parent tracks. Making room by dropping a *miss* would be the wrong trade —
+made/missed pairs are what shooting percentages, and the Growth view's skill
+rows, are built from.
+
+**Stats not tracked can't be recovered.** Turnovers were off by default and a
+coach asked for them; there was no way to fill in games already played. Worth
+saying out loud when someone asks for a new stat.
+
 **Team Stats is My Kid applied to a roster.** Same tap grid, same stat set
 (configurable, stored on the saved team so a season's averages compare), same
 event log, plus a strip of jersey numbers to pick who. The selection sticks, so
@@ -164,14 +176,16 @@ before being understood.
 devices and across app versions: `hardwoods.drill.v1` (coach-provided drills),
 `hardwoods.kidgames.v1` (My Kid game transfer), `hardwoods.teamgame.v1` (a Team
 Stats game — `hooks/teamTransfer.ts`), `hardwoods.profile.v1` (a whole kid —
-`hooks/profileBackup.ts`). The backup format deliberately *reuses* kidgames'
+`hooks/profileBackup.ts`), `hardwoods.teamseason.v1` (every game a team played —
+`hooks/teamSeasonTransfer.ts`, built for a coach who wants the season rather
+than a screenshot of a box score). The backup format deliberately *reuses* kidgames'
 game shape and its parser rather than restating it, so the sharing path and the
 backup path can't disagree about what a game is. Parse strictly and return readable errors
 — a bad file should never produce a half-merged season. **All of them share the
 `.hardwoods` extension**, so iOS hands every file to `kidimport.tsx`, which
-reads it once and routes on `format` — team games to `teamimport.tsx`, backups
-to `profileimport.tsx`, with the JSON as a param. Add a fourth format there, not
-in `_layout.tsx`. **`app/+not-found.tsx` matters here**: iOS hands the same
+reads it once and routes on `format` — team games to `teamimport.tsx`, seasons
+to `teamseasonimport.tsx`, backups to `profileimport.tsx`, with the JSON as a
+param. Add the next format there, not in `_layout.tsx`. **`app/+not-found.tsx` matters here**: iOS hands the same
 file:// URL to expo-router, which can't match it and would otherwise leave its
 Unmatched Route screen in the stack behind the importer — invisible going in,
 and what `back` lands on afterwards. It redirects home instead.

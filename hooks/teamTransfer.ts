@@ -64,13 +64,17 @@ function isEvent(e: unknown): e is StatEvent {
   return !!x && typeof x.key === 'string' && typeof x.at === 'number';
 }
 
-export function parseTeamTransfer(raw: unknown): TeamTransferParse {
-  const f = raw as Partial<TeamTransferFile>;
-  if (!f || typeof f !== 'object') return { ok: false, error: 'That file is not a Hardwoods export.' };
-  if (f.format !== TEAM_TRANSFER_FORMAT) {
-    return { ok: false, error: 'Unrecognized file format — it may be from a newer version of Hardwoods.' };
-  }
-  const g = f.game as Partial<ArchivedGame> | undefined;
+export type GameParse =
+  | { ok: true; game: ArchivedGame }
+  | { ok: false; error: string };
+
+/**
+ * One archived game, validated and normalised. Shared by the single-game
+ * format and the season format so there is exactly one definition of what
+ * a well-formed game looks like coming off a file.
+ */
+export function parseArchivedGame(raw: unknown): GameParse {
+  const g = raw as Partial<ArchivedGame> | undefined;
   if (!g || typeof g !== 'object') return { ok: false, error: 'That file has no game in it.' };
   if (typeof g.date !== 'number' || !Number.isFinite(g.date)) return { ok: false, error: 'That game has no date.' };
   if (!g.teamA || typeof g.teamA.name !== 'string' || !g.teamA.name.trim()) {
@@ -95,22 +99,36 @@ export function parseTeamTransfer(raw: unknown): TeamTransferParse {
     };
   });
 
-  const game: ArchivedGame = {
-    id: '',                      // assigned on import; see toArchivedGame
-    date: g.date,
-    source: g.source === 'scorebook' ? 'scorebook' : 'teamstats',
-    teamA: { name: g.teamA.name.trim(), color: typeof g.teamA.color === 'string' ? g.teamA.color : '#1E90FF', players },
-    teamB: {
-      name: typeof g.teamB?.name === 'string' && g.teamB.name.trim() ? g.teamB.name.trim() : 'Opponent',
-      color: typeof g.teamB?.color === 'string' ? g.teamB.color : '#666666',
-      players: Array.isArray(g.teamB?.players) ? g.teamB!.players : [],
+  return {
+    ok: true,
+    game: {
+      id: '',                      // assigned on import; see toArchivedGame
+      date: g.date,
+      source: g.source === 'scorebook' ? 'scorebook' : 'teamstats',
+      teamA: { name: g.teamA.name.trim(), color: typeof g.teamA.color === 'string' ? g.teamA.color : '#1E90FF', players },
+      teamB: {
+        name: typeof g.teamB?.name === 'string' && g.teamB.name.trim() ? g.teamB.name.trim() : 'Opponent',
+        color: typeof g.teamB?.color === 'string' ? g.teamB.color : '#666666',
+        players: Array.isArray(g.teamB?.players) ? g.teamB!.players : [],
+      },
+      periodScores: Array.isArray(g.periodScores) && g.periodScores.length > 0
+        ? g.periodScores
+        : [{ teamA: g.finalA, teamB: g.finalB }],
+      finalA: g.finalA,
+      finalB: g.finalB,
     },
-    periodScores: Array.isArray(g.periodScores) && g.periodScores.length > 0
-      ? g.periodScores
-      : [{ teamA: g.finalA, teamB: g.finalB }],
-    finalA: g.finalA,
-    finalB: g.finalB,
   };
+}
+
+export function parseTeamTransfer(raw: unknown): TeamTransferParse {
+  const f = raw as Partial<TeamTransferFile>;
+  if (!f || typeof f !== 'object') return { ok: false, error: 'That file is not a Hardwoods export.' };
+  if (f.format !== TEAM_TRANSFER_FORMAT) {
+    return { ok: false, error: 'Unrecognized file format — it may be from a newer version of Hardwoods.' };
+  }
+  const parsed = parseArchivedGame(f.game);
+  if (!parsed.ok) return parsed;
+  const game = parsed.game;
 
   return {
     ok: true,

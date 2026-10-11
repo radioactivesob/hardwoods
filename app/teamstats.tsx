@@ -6,7 +6,7 @@ import { Text } from '../components/AppText';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTeamLibrary, SavedTeam } from '../hooks/useTeamLibrary';
-import { STAT_DEFS, StatKey, MAX_ENABLED_STATS, STAT_ORDER } from '../hooks/kidStats';
+import { STAT_DEFS, StatKey, TEAM_MAX_ENABLED_STATS, STAT_ORDER } from '../hooks/kidStats';
 import { teamEnabledStats, TeamStatsInProgress, TEAM_STATS_IN_PROGRESS_KEY } from '../hooks/teamStats';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
@@ -57,8 +57,8 @@ export default function TeamStats() {
   const toggleStat = (t: SavedTeam, key: StatKey) => {
     const current = teamEnabledStats(t);
     const on = current.includes(key);
-    if (!on && current.length >= MAX_ENABLED_STATS) {
-      Alert.alert(`${MAX_ENABLED_STATS} Stats Max`, 'Turn off another stat first — a bigger grid gets hard to tap accurately from the stands.');
+    if (!on && current.length >= TEAM_MAX_ENABLED_STATS) {
+      Alert.alert(`${TEAM_MAX_ENABLED_STATS} Stats Max`, 'Turn off another stat first — a bigger grid gets hard to tap accurately mid-game.');
       return;
     }
     const next = on
@@ -156,7 +156,7 @@ export default function TeamStats() {
             {team && (
               <>
                 <Text style={styles.sectionLabel}>
-                  STATS TO TRACK ({enabled.length}/{MAX_ENABLED_STATS})
+                  STATS TO TRACK ({enabled.length}/{TEAM_MAX_ENABLED_STATS})
                 </Text>
                 <Text style={styles.hint}>
                   Saved with the team. Keep it the same all season so the averages compare cleanly.

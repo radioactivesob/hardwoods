@@ -52,6 +52,14 @@ Store with `appstore/whats-new-2.8.0.txt`.
 
 ---
 
+## 2.10 — The coach's season *(built, unshipped)*
+
+Triggered by a real request: Evelyn's coach liked the Team Stats screenshots and
+wanted the data. `hardwoods.teamseason.v1` sends every game a team played;
+a coach with Hardwoods opens it and gets the whole Team Seasons view. Turnovers
+and blocks now have columns (`TO/G`, `BPG`), and Team Stats tracks twelve stats
+so they can be added without dropping a miss.
+
 ## 2.9 — Data out *(built, unshipped)*
 
 **Training sessions can't leave the phone.** That's a backup hole — training
@@ -145,6 +153,10 @@ hand the parent a sheet. See the design note in `DESIGN.md`.
 - **Coach mode** (builder UI, distribute sheets, collect sessions back). The
   return trip is N separate AirDrops with no roster view; it fights the
   no-cloud constraint hardest. Wait for a coach to ask.
+  *Partly answered 2026-10-11:* Evelyn's coach asked to see the season rather
+  than screenshots, so `hardwoods.teamseason.v1` ships in 2.10.0 — he opens one
+  file and gets records, box scores and player averages including TO/G. That is
+  the *read* half. A builder UI and sessions coming back are still parked.
 - **Team Seasons coach export** (CSV/PDF). `expo-print` is already wired in
   `scorebook.tsx` and `kidseason.tsx`.
 - **`scoring.tsx` portrait layout** in the Full Scorebook. Deferred by

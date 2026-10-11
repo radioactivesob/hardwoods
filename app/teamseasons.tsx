@@ -5,6 +5,9 @@ import {
 import { Text } from '../components/AppText';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTeamGames, ArchivedPlayer } from '../hooks/useTeamGames';
+import { File, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import { buildTeamSeason, suggestSeasonFileName } from '../hooks/teamSeasonTransfer';
 import { useAllOrientations } from '../hooks/useScreenOrientation';
 
 function formatDate(ts: number) {
@@ -22,6 +25,8 @@ interface PlayerAgg {
   fouls: number;
   // Only Team Stats games carry these; scorebook games contribute nothing.
   rebounds: number;
+  turnovers: number;
+  blocks: number;
   assists: number;
   steals: number;
   /** Games where the fuller stat set was tracked — the divisor for RPG/APG/SPG. */
@@ -35,6 +40,7 @@ export default function TeamSeasons() {
   const { team: teamParam } = useLocalSearchParams<{ team?: string }>();
   const [selected, setSelected] = useState<string | null>(teamParam ?? null);
   const [opponentFilter, setOpponentFilter] = useState<string | null>(null);
+  const [sendingSeason, setSendingSeason] = useState(false);
 
   const teamList = teams();
   const team = selected ? teamList.find(t => t.name.trim().toLowerCase() === selected.trim().toLowerCase()) ?? null : null;
@@ -43,6 +49,36 @@ export default function TeamSeasons() {
     if (opponentFilter) setOpponentFilter(null);
     else if (selected) setSelected(null);
     else router.back();
+  };
+
+  /**
+   * The whole season as data, for a coach who has Hardwoods. Every game this
+   * team played, not the filtered view — a coach wants the season, and the
+   * filter is a reading aid on this screen.
+   */
+  const shareSeason = async (teamName: string, color: string) => {
+    const all = gamesForTeam(teamName).map(r => r.game);
+    if (all.length === 0) return;
+    try {
+      setSendingSeason(true);
+      const payload = buildTeamSeason(teamName, color, all);
+      const file = new File(Paths.cache, suggestSeasonFileName(teamName, all.length));
+      file.create({ overwrite: true });
+      file.write(JSON.stringify(payload));
+      if (!(await Sharing.isAvailableAsync())) {
+        Alert.alert('Sharing Unavailable', 'This device cannot open the share sheet.');
+        return;
+      }
+      await Sharing.shareAsync(file.uri, {
+        mimeType: 'application/octet-stream',
+        dialogTitle: `${teamName} — ${all.length} game${all.length === 1 ? '' : 's'}`,
+        UTI: 'com.hardwoods.gamefile',
+      });
+    } catch {
+      Alert.alert('Share Failed', 'Could not create the file. Try again.');
+    } finally {
+      setSendingSeason(false);
+    }
   };
 
   let body: React.ReactNode;
@@ -56,7 +92,7 @@ export default function TeamSeasons() {
           Seasons build themselves from your saved games.
         </Text>
         <TouchableOpacity style={styles.importBtn} onPress={() => router.push('/kidimport')}>
-          <Text style={styles.importBtnText}>IMPORT A GAME FILE</Text>
+          <Text style={styles.importBtnText}>IMPORT A GAME OR SEASON</Text>
         </TouchableOpacity>
       </View>
     ) : (
@@ -76,7 +112,7 @@ export default function TeamSeasons() {
           </TouchableOpacity>
         ))}
         <TouchableOpacity style={styles.importLink} onPress={() => router.push('/kidimport')}>
-          <Text style={styles.importLinkText}>IMPORT A GAME SOMEONE SENT ›</Text>
+          <Text style={styles.importLinkText}>IMPORT A GAME OR SEASON ›</Text>
         </TouchableOpacity>
       </ScrollView>
     );
@@ -100,7 +136,7 @@ export default function TeamSeasons() {
         const key = `${p.number}|${p.name.toLowerCase()}`;
         const a = aggMap.get(key) ?? {
           key, name: p.name, number: p.number, gp: 0, points: 0, fgMade: 0, fgAttempted: 0, fouls: 0,
-          rebounds: 0, assists: 0, steals: 0, gpFull: 0,
+          rebounds: 0, assists: 0, steals: 0, turnovers: 0, blocks: 0, gpFull: 0,
         };
         a.gp += 1;
         a.points += p.stats.points;
@@ -112,12 +148,19 @@ export default function TeamSeasons() {
           a.rebounds += p.totals.rebound ?? 0;
           a.assists += p.totals.assist ?? 0;
           a.steals += p.totals.steal ?? 0;
+          a.turnovers += p.totals.turnover ?? 0;
+          a.blocks += p.totals.block ?? 0;
         }
         aggMap.set(key, a);
       });
     });
     const players = Array.from(aggMap.values()).sort((a, b) => b.points - a.points);
     const hasFull = players.some(p => p.gpFull > 0);
+    // Turnovers and blocks are opt-in stats, so only give them a column when
+    // the team tracked them — an all-zero column reads as "nobody turns it
+    // over", which isn't what it means.
+    const hasTO = players.some(p => p.turnovers > 0);
+    const hasBlk = players.some(p => p.blocks > 0);
     const per = (n: number, gp: number) => (gp > 0 ? (n / gp).toFixed(1) : '—');
 
     body = (
@@ -233,6 +276,19 @@ export default function TeamSeasons() {
         })}
         <Text style={styles.deleteHint}>Long-press a game to fix the opponent, edit stats, or delete it.</Text>
 
+        <TouchableOpacity
+          style={[styles.seasonShareBtn, sendingSeason && { opacity: 0.6 }]}
+          onPress={sendingSeason ? undefined : () => shareSeason(team.name, team.color)}
+        >
+          <Text style={styles.seasonShareText}>
+            {sendingSeason ? 'PREPARING…' : 'SHARE SEASON'}
+          </Text>
+        </TouchableOpacity>
+        <Text style={styles.seasonShareHint}>
+          Sends every game as data. A coach with Hardwoods opens it and gets the
+          whole season — box scores, records, and these averages.
+        </Text>
+
         {players.length > 0 && (
           <>
             <Text style={styles.sectionLabel}>PLAYER SEASON AVERAGES</Text>
@@ -244,6 +300,8 @@ export default function TeamSeasons() {
               {hasFull && <Text style={[styles.cell, styles.headerCell]}>RPG</Text>}
               {hasFull && <Text style={[styles.cell, styles.headerCell]}>APG</Text>}
               {hasFull && <Text style={[styles.cell, styles.headerCell]}>SPG</Text>}
+              {hasBlk && <Text style={[styles.cell, styles.headerCell]}>BPG</Text>}
+              {hasTO && <Text style={[styles.cell, styles.headerCell]}>TO/G</Text>}
               <Text style={[styles.cell, styles.headerCell]}>PF/G</Text>
             </View>
             {players.map(p => (
@@ -257,6 +315,8 @@ export default function TeamSeasons() {
                 {hasFull && <Text style={styles.cell}>{per(p.rebounds, p.gpFull)}</Text>}
                 {hasFull && <Text style={styles.cell}>{per(p.assists, p.gpFull)}</Text>}
                 {hasFull && <Text style={styles.cell}>{per(p.steals, p.gpFull)}</Text>}
+                {hasBlk && <Text style={styles.cell}>{per(p.blocks, p.gpFull)}</Text>}
+                {hasTO && <Text style={styles.cell}>{per(p.turnovers, p.gpFull)}</Text>}
                 <Text style={styles.cell}>{(p.fouls / p.gp).toFixed(1)}</Text>
               </View>
             ))}
@@ -362,4 +422,10 @@ const styles = StyleSheet.create({
   importBtnText: { color: '#C8A040', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
   importLink: { alignSelf: 'center', paddingVertical: 14, marginTop: 6 },
   importLinkText: { color: '#8B6914', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+  seasonShareBtn: {
+    marginTop: 18, borderWidth: 1.5, borderColor: '#8B6914', borderRadius: 10,
+    paddingVertical: 13, alignItems: 'center',
+  },
+  seasonShareText: { color: '#C8A040', fontSize: 13, fontWeight: '900', letterSpacing: 1.5 },
+  seasonShareHint: { color: '#555', fontSize: 11, lineHeight: 16, textAlign: 'center', marginTop: 8 },
 });
