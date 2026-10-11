@@ -1,0 +1,33 @@
+Back up your kid's season
+
+Hardwoods keeps everything on your phone and nothing in the cloud. That's what
+keeps it private — but it also means deleting the app would take the season with
+it. Now it doesn't have to. Open your kid's profile, tap BACK UP EVERYTHING, and
+send the file to yourself: games, training sessions, and her settings, all in
+one. Open that file on any phone and it all comes back. Restoring skips anything
+already there, so an older backup fills the gaps and leaves newer games alone.
+
+Send the coach the whole season
+
+Team Seasons has a SHARE SEASON button. A coach with Hardwoods opens that one
+file and gets everything — the record, every box score, and the player season
+averages table — instead of a screenshot he can't dig into. Send him an updated
+file whenever you like; games he already has are skipped. Sharing a single game
+still works too, straight from its box score.
+
+Turnovers and blocks
+
+Team Stats now tracks up to twelve stats, so you can add turnovers and blocks
+without giving anything up. Both get their own column in the season averages —
+TO/G and BPG — when your team tracks them. Worth switching on before a game
+rather than after: a stat you didn't track can't be filled in later.
+
+Smaller things
+
+The end-of-game prompt in Team Stats already knows your score — it's been
+counting all game — so it fills it in and puts the cursor on the opponent's.
+And opening a shared game file no longer leaves a stray screen behind when you
+back out of it.
+
+As always: no accounts, no ads, no tracking. Nothing leaves your phone unless
+you choose to send it.
