@@ -52,7 +52,7 @@ Store with `appstore/whats-new-2.8.0.txt`.
 
 ---
 
-## 2.9 — Data out *(next; prerequisite for everything after)*
+## 2.9 — Data out *(built, unshipped)*
 
 **Training sessions can't leave the phone.** That's a backup hole — training
 was the data lost when the app was deleted in August — and it's the reason
@@ -67,7 +67,18 @@ Evelyn's real practice data can't be used to build v3. Fix it first.
   that gets copied into the simulator to develop v3 against.
 - Same for Crosscourt, same session.
 
-Small, mechanical, and it unlocks the rest.
+**Shipped as one format, not two.** `hardwoods.profile.v1` carries the profile,
+games, training sessions, drill targets and any coach drills those refer to —
+the separate `hardwoods.training.v1` sketched here would have overlapped it and
+drifted, and coach-facing training export is parked anyway. Games travel in
+kidgames' own shape and go through its parser.
+
+Also in this build: the end-of-game score prompt in Team Stats prefills our
+score (it's been counted all game) and starts the cursor on the opponent's, and
+`app/+not-found.tsx` stops an opened .hardwoods file leaving expo-router's
+Unmatched Route screen behind the importer.
+
+**Next:** export Evelyn's real backup and develop 3.0 against it.
 
 ---
 

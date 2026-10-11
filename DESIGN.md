@@ -163,11 +163,18 @@ before being understood.
 **File formats are versioned from day one**, because they get shared between
 devices and across app versions: `hardwoods.drill.v1` (coach-provided drills),
 `hardwoods.kidgames.v1` (My Kid game transfer), `hardwoods.teamgame.v1` (a Team
-Stats game — `hooks/teamTransfer.ts`). Parse strictly and return readable errors
+Stats game — `hooks/teamTransfer.ts`), `hardwoods.profile.v1` (a whole kid —
+`hooks/profileBackup.ts`). The backup format deliberately *reuses* kidgames'
+game shape and its parser rather than restating it, so the sharing path and the
+backup path can't disagree about what a game is. Parse strictly and return readable errors
 — a bad file should never produce a half-merged season. **All of them share the
 `.hardwoods` extension**, so iOS hands every file to `kidimport.tsx`, which
-reads it once and routes on `format` — a team game goes to `teamimport.tsx` with
-the JSON as a param. Add a fourth format there, not in `_layout.tsx`.
+reads it once and routes on `format` — team games to `teamimport.tsx`, backups
+to `profileimport.tsx`, with the JSON as a param. Add a fourth format there, not
+in `_layout.tsx`. **`app/+not-found.tsx` matters here**: iOS hands the same
+file:// URL to expo-router, which can't match it and would otherwise leave its
+Unmatched Route screen in the stack behind the importer — invisible going in,
+and what `back` lands on afterwards. It redirects home instead.
 
 **A team game arriving offers each player's line to her profile**, using the
 same `findProfileForPlayer` matching a live game uses, with the kid-side entry
@@ -188,8 +195,13 @@ reported "0 games added" for this reason while actually importing correctly —
 compute the result from current state first, then call `update`.
 
 **Uninstalling the app deletes everything.** All data is on-device by design, so
-there is no recovery. Exporting from My Kid (`SELECT ALL` → share to yourself)
-is the only backup, and is worth suggesting before anyone deletes or reinstalls.
+there is no recovery beyond a file the user has already made. **Back Up
+Everything** on a My Kid profile (`hooks/profileBackup.ts`,
+`hardwoods.profile.v1`) is the one that covers all of it — games, training
+sessions, drill targets, coach drills — and is worth suggesting before anyone
+deletes or reinstalls. Restores are additive and idempotent: everything already
+present is skipped by fingerprint, so an older backup fills gaps without
+clobbering anything newer.
 
 **Undo names what it undoes** — "UNDO MISS — Left wing", not just "UNDO".
 
